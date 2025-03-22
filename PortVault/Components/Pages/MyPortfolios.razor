@@ -1,0 +1,30 @@
+﻿@page "/myportfolios"
+
+<h3>My Portfolios</h3>
+
+@if (funds.Count == 0)
+{
+    <p>Loading mutual fund data...</p>
+}
+else
+{
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Fund Name</th>
+                <th>NAV</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var fund in funds)
+            {
+                <tr>
+                    <td>@fund.Name</td>
+                    <td>@fund.NAV</td>
+                    <td>@fund.Date</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

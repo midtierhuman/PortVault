@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SQLitePCL;
 
 namespace PortVault
 {
@@ -6,6 +7,7 @@ namespace PortVault
     {
         public static MauiApp CreateMauiApp()
         {
+            Batteries.Init();
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
@@ -20,7 +22,7 @@ namespace PortVault
     		builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
-
+            DBHelper.InitializeDatabase();
             return builder.Build();
         }
     }

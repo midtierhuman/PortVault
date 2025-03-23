@@ -1,36 +1,51 @@
 ﻿using System;
 using System.Data;
 using System.IO;
+using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-public static class DBHelper
+public  class DBHelper
 {
-    private static readonly string DbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PortVault.db");
+    private readonly string _dbPath;
 
-    public static void InitializeDatabase()
+    public DBHelper()
     {
-        if (!File.Exists(DbPath))
+        _dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PortVault.db");
+    }
+
+    public async Task InitializeDatabase()
+    {
+        if (!File.Exists(_dbPath))
         {
             Console.WriteLine("Database not found! Creating new database...");
-            File.Create(DbPath).Close(); // Creates an empty database file
+            File.Create(_dbPath).Close(); // Creates an empty database file
         }
 
         using var connection = GetConnection();
         connection.Open();
 
         // Create Tables if they do not exist
-        connection.Execute(@"
-            CREATE TABLE IF NOT EXISTS AvailableMutualFunds (
-                AmfiCode INTEGER PRIMARY KEY,
-                ISIN1 TEXT,
-                ISIN2 TEXT,
-                FundName TEXT NOT NULL,
-                NAV REAL NOT NULL,
-                LastUpdated TEXT NOT NULL
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS MutualFunds (
+                SchemeCode INTEGER PRIMARY KEY,
+                ISINDivPayoutOrGrowth TEXT NULL,
+                ISINDivReinvestment TEXT NULL,
+                SchemeName TEXT NOT NULL,
+                NetAssetValue REAL NOT NULL,
+                NAVDate TEXT NOT NULL 
             );");
 
-        connection.Execute(@"
+        await connection.ExecuteAsync(@"
+            CREATE INDEX IF NOT EXISTS idx_mutualfunds_schemename 
+            ON MutualFunds(SchemeName);
+            ");
+        await connection.ExecuteAsync(@"
+            CREATE INDEX IF NOT EXISTS idx_mutualfunds_schemecode
+            ON MutualFunds(SchemeCode);
+            ");
+
+        await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS Users (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Email TEXT UNIQUE NOT NULL,
@@ -39,7 +54,7 @@ public static class DBHelper
                 PasswordHash TEXT NOT NULL
             );");
 
-        connection.Execute(@"
+        await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS UserPortfolio (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 UserId INTEGER NOT NULL,
@@ -50,7 +65,7 @@ public static class DBHelper
                 FOREIGN KEY (AmfiCode) REFERENCES AvailableMutualFunds(AmfiCode)
             );");
 
-        connection.Execute(@"
+       await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS Stocks (
                 Symbol TEXT PRIMARY KEY,
                 CompanyName TEXT NOT NULL,
@@ -61,8 +76,8 @@ public static class DBHelper
         Console.WriteLine("Database Initialized Successfully.");
     }
 
-    public static SqliteConnection GetConnection()
+    internal SqliteConnection GetConnection()
     {
-        return new SqliteConnection($"Data Source={DbPath};");
+        return new SqliteConnection($"Data Source={_dbPath};");
     }
 }

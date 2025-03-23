@@ -67,8 +67,4 @@
         <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Services\MutualFund\" />
-    </ItemGroup>
-
 </Project>

@@ -10,9 +10,15 @@ namespace PortVault.Repositories.UserPortfolioRepository
 {
     internal class UserPortfolioRepository : IUserPortfolioRepository
     {
+        private readonly DBHelper _dbHelper;
+
+        public UserPortfolioRepository(DBHelper dbHelper)
+        {
+            _dbHelper = dbHelper;
+        }
         public async Task<List<UserPortfolio>> GetUserPortfoliosAsync(int userId)
         {
-            using var connection = DBHelper.GetConnection();
+            using var connection = _dbHelper.GetConnection();
             await connection.OpenAsync();
             var portfolios = await connection.QueryAsync<UserPortfolio>(
                 "SELECT * FROM UserPortfolio WHERE UserId = @UserId",
@@ -23,7 +29,7 @@ namespace PortVault.Repositories.UserPortfolioRepository
 
         public async Task AddPortfolioAsync(UserPortfolio portfolio)
         {
-            using var connection = DBHelper.GetConnection();
+            using var connection = _dbHelper.GetConnection();
             await connection.OpenAsync();
             await connection.ExecuteAsync(
                 "INSERT INTO UserPortfolio (UserId, AmfiCode, StockSymbol, Units) VALUES (@UserId, @AmfiCode, @StockSymbol, @Units)",
@@ -32,7 +38,7 @@ namespace PortVault.Repositories.UserPortfolioRepository
 
         public async Task DeletePortfolioAsync(int portfolioId)
         {
-            using var connection = DBHelper.GetConnection();
+            using var connection = _dbHelper.GetConnection();
             await connection.OpenAsync();
             await connection.ExecuteAsync(
                 "DELETE FROM UserPortfolio WHERE Id = @Id",

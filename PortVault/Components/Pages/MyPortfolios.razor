@@ -2,27 +2,43 @@
 
 <h3>My Portfolios</h3>
 
-@if (funds.Count == 0)
+<!-- Search Box -->
+<input type="text" value="@searchText" @oninput="OnSearchChanged" placeholder="Search Mutual Funds..." />
+
+<!-- Search Results -->
+@if (searchResults.Any())
 {
-    <p>Loading mutual fund data...</p>
+    <ul class="search-dropdown">
+        @foreach (var fund in searchResults)
+        {
+            <li @onclick="() => AddFundToPortfolio(fund)">
+                @fund.SchemeName (@fund.NetAssetValue)
+            </li>
+        }
+    </ul>
 }
-else
+
+<!-- Selected Funds Table -->
+@if (selectedFunds.Any())
 {
+    <h4>Selected Funds</h4>
     <table border="1">
         <thead>
             <tr>
                 <th>Fund Name</th>
                 <th>NAV</th>
                 <th>Date</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var fund in funds)
+            @foreach (var fund in selectedFunds)
             {
                 <tr>
-                    <td>@fund.Name</td>
-                    <td>@fund.NAV</td>
-                    <td>@fund.Date</td>
+                    <td>@fund.SchemeName</td>
+                    <td>@fund.NetAssetValue</td>
+                    <td>@fund.NAVDate</td>
+                    <td><button @onclick="() => RemoveFund(fund)">Remove</button></td>
                 </tr>
             }
         </tbody>

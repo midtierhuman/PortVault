@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
+using PortVault.Models;
+using PortVault.Services.MutualFund;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,56 +11,45 @@ namespace PortVault.Components.Pages
 {
     public partial class MyPortfolios : ComponentBase
     {
-        protected List<MutualFund> funds = new();
+        [Inject]
+        private IMutualFundService MutualFundService { get; set; }
+
+        private string searchText = "";
+        private List<MutualFundModel> searchResults = new();
+        private List<MutualFundModel> selectedFunds = new();
 
         protected override async Task OnInitializedAsync()
         {
-            await FetchAMFIData();
+            await MutualFundService.EnsureFundsExistAsync();
         }
 
-        private async Task FetchAMFIData()
+        // Search function triggered when input text changes
+        private async Task OnSearchChanged(ChangeEventArgs e)
         {
-            try
+            searchText = e.Value?.ToString() ?? "";
+            if (searchText.Length >= 4)
             {
-                using HttpClient client = new();
-                string url = "https://www.amfiindia.com/spages/NAVAll.txt"; // AMFI API endpoint
-                string response = await client.GetStringAsync(url);
-
-                funds = ParseAMFIResponse(response);
+                searchResults = await MutualFundService.SearchFundsAsync(searchText);
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Error fetching AMFI data: {ex.Message}");
+                searchResults.Clear();
             }
+            await InvokeAsync(StateHasChanged);
         }
 
-        private List<MutualFund> ParseAMFIResponse(string data)
+        private void AddFundToPortfolio(MutualFundModel fund)
         {
-            List<MutualFund> result = new();
-            string[] lines = data.Split('\n');
-
-            foreach (string line in lines)
+            if (!selectedFunds.Any(f => f.SchemeCode == fund.SchemeCode))
             {
-                var parts = line.Split(';');
-                if (parts.Length >= 4 && decimal.TryParse(parts[1], out decimal nav))
-                {
-                    result.Add(new MutualFund
-                    {
-                        Name = parts[0].Trim(),
-                        NAV = nav,
-                        Date = parts[3].Trim()
-                    });
-                }
+                selectedFunds.Add(fund);
             }
-            return result;
+            searchResults.Clear();
         }
-    }
 
-    // Model class
-    public class MutualFund
-    {
-        public string Name { get; set; }
-        public decimal NAV { get; set; }
-        public string Date { get; set; }
-    }
+        private void RemoveFund(MutualFundModel fund)
+        {
+            selectedFunds.Remove(fund);
+        }
+    }   
 }

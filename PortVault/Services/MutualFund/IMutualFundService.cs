@@ -10,7 +10,12 @@ namespace PortVault.Services.MutualFund
     public interface IMutualFundService
     {
         Task EnsureFundsExistAsync();
-        Task<List<MutualFundModel>> GetFundsAsync();
+        Task<List<MutualFundModel>> GetAllFundsAsync();
         Task<List<MutualFundModel>> SearchFundsAsync(string query);
+        Task BulkUpdateNAVsAsync();
+        Task BulkInsertNewFundsAsync();
+        Task ClearFundsAsync();
+        Task BulkInsertFundsAsync();
+        Task EnsureNavIsUpdated();
     }
 }

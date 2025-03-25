@@ -16,36 +16,45 @@ public  class DBHelper
 
     public async Task InitializeDatabase()
     {
-        if (!File.Exists(_dbPath))
+        try
         {
-            Console.WriteLine("Database not found! Creating new database...");
-            File.Create(_dbPath).Close(); // Creates an empty database file
-        }
+            if (!File.Exists(_dbPath))
+            {
+                Console.WriteLine("Database not found! Creating new database...");
+                File.Create(_dbPath).Close(); // Creates an empty database file
+            }
 
-        using var connection = GetConnection();
-        connection.Open();
+            using var connection = GetConnection();
+            connection.Open();
 
-        // Create Tables if they do not exist
-        await connection.ExecuteAsync(@"
+            // Create Tables if they do not exist
+            await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS MutualFunds (
                 SchemeCode INTEGER PRIMARY KEY,
+                SchemeName TEXT NOT NULL,
                 ISINDivPayoutOrGrowth TEXT NULL,
                 ISINDivReinvestment TEXT NULL,
-                SchemeName TEXT NOT NULL,
                 NetAssetValue REAL NOT NULL,
                 NAVDate TEXT NOT NULL 
             );");
 
-        await connection.ExecuteAsync(@"
+            await connection.ExecuteAsync(@"
             CREATE INDEX IF NOT EXISTS idx_mutualfunds_schemename 
             ON MutualFunds(SchemeName);
             ");
-        await connection.ExecuteAsync(@"
+            await connection.ExecuteAsync(@"
             CREATE INDEX IF NOT EXISTS idx_mutualfunds_schemecode
             ON MutualFunds(SchemeCode);
             ");
 
-        await connection.ExecuteAsync(@"
+            await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS LastUpdateLog (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                EntityType TEXT NOT NULL UNIQUE CHECK (EntityType IN ('MutualFunds', 'Stocks')),
+                LastUpdatedUtc DATETIME NOT NULL
+            );");
+
+            await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS Users (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Email TEXT UNIQUE NOT NULL,
@@ -54,26 +63,45 @@ public  class DBHelper
                 PasswordHash TEXT NOT NULL
             );");
 
-        await connection.ExecuteAsync(@"
-            CREATE TABLE IF NOT EXISTS UserPortfolio (
+            await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS UserPortfolios (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 UserId INTEGER NOT NULL,
-                AmfiCode INTEGER,
-                StockSymbol TEXT,
+                PortfolioName TEXT NOT NULL,
+                FOREIGN KEY (UserId) REFERENCES Users(Id)
+            );");
+
+            await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS UserMFPortfolio (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                UserId INTEGER NOT NULL,
+                PortfolioId INTEGER NOT NULL,
+                SchemeCode INTEGER,
+                SchemeName TEXT,
                 Units REAL NOT NULL,
                 FOREIGN KEY (UserId) REFERENCES Users(Id),
-                FOREIGN KEY (AmfiCode) REFERENCES AvailableMutualFunds(AmfiCode)
+                FOREIGN KEY (PortfolioId) REFERENCES UserPortfolios(Id),
+                FOREIGN KEY (SchemeCode) REFERENCES MutualFunds(SchemeCode)
             );");
 
-       await connection.ExecuteAsync(@"
-            CREATE TABLE IF NOT EXISTS Stocks (
-                Symbol TEXT PRIMARY KEY,
-                CompanyName TEXT NOT NULL,
+            await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS UserStockPortfolio (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                UserId INTEGER NOT NULL,
+                PortfolioId INTEGER NOT NULL,
+                Symbol TEXT NOT NULL,
+                Name TEXT NOT NULL,
                 LastPrice REAL NOT NULL,
-                LastUpdated TEXT NOT NULL
+                LastUpdated TEXT NOT NULL,
+                FOREIGN KEY (UserId) REFERENCES Users(Id),
+                FOREIGN KEY (PortfolioId) REFERENCES UserPortfolios(Id)
             );");
 
-        Console.WriteLine("Database Initialized Successfully.");
+            Console.WriteLine("Database Initialized Successfully.");
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error initializing database: {ex.Message}");
+        }
     }
 
     internal SqliteConnection GetConnection()

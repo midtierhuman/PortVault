@@ -24,7 +24,8 @@ namespace PortVault.Services.MutualFund
             if (fundCount < 15)
             {
                 Console.WriteLine("⚠️ Not enough data! Fetching new mutual fund data...");
-                await FetchAndStoreAMFIData();
+                var fund = await FetchAndParseAMFIDataAsync();
+                await StoreAMFIDataAsync(fund);
             }
             else
             {
@@ -32,17 +33,49 @@ namespace PortVault.Services.MutualFund
             }
         }
 
-        public async Task<List<MutualFundModel>> GetFundsAsync()
+        public async Task<List<MutualFundModel>> GetAllFundsAsync()
         {
-            return await _repository.GetFundsAsync();
+            return await _repository.GetAllFundsAsync();
         }
 
         public async Task<List<MutualFundModel>> SearchFundsAsync(string query)
         {
             return await _repository.SearchMutualFundsAsync(query);
         }
+
+      public async Task EnsureNavIsUpdated()
+        {
+            var lastNavUpdationTime = await _repository.GetLastNAVTimeAsync();
+            var shouldUpdate = ShouldUpdate(Convert.ToDateTime(lastNavUpdationTime));
+            if (shouldUpdate)
+            {
+                await BulkUpdateNAVsAsync();
+            }
+        } 
+
+        public async Task BulkUpdateNAVsAsync()
+        {
+            var funds = await FetchAndParseAMFIDataAsync();
+            await _repository.BulkUpdateNAVsAsync(funds);
+        }
+        public async Task BulkInsertNewFundsAsync()
+        {
+            var funds = await FetchAndParseAMFIDataAsync();
+            await _repository.BulkInsertNewFundsAsync(funds);
+        }
+        public async Task ClearFundsAsync()
+        {
+            await _repository.ClearFundsAsync();
+        }
+        public async Task BulkInsertFundsAsync()
+        {
+            var funds = await FetchAndParseAMFIDataAsync();
+            await _repository.InsertFundsAsync(funds);
+        }
+
         //----------------------------------------------//
-        private async Task FetchAndStoreAMFIData()
+
+        private async Task<List<MutualFundModel>> FetchAndParseAMFIDataAsync()
         {
             try
             {
@@ -55,6 +88,30 @@ namespace PortVault.Services.MutualFund
                 if (funds.Count == 0)
                 {
                     Console.WriteLine("⚠ No valid mutual fund records found in AMFI data.");
+                    return null;
+                }
+
+                return funds;
+            }
+            catch (HttpRequestException httpEx)
+            {
+                Console.WriteLine($"❌ Network error while fetching AMFI data: {httpEx.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching or parsing AMFI data: {ex.Message}");
+                return null;
+            }
+        }
+
+        private async Task StoreAMFIDataAsync(List<MutualFundModel> funds)
+        {
+            try
+            {
+                if (funds.Count == 0)
+                {
+                    Console.WriteLine("⚠ No valid mutual fund records to store.");
                     return;
                 }
 
@@ -63,13 +120,9 @@ namespace PortVault.Services.MutualFund
 
                 Console.WriteLine($"✅ {funds.Count} Mutual Fund records updated.");
             }
-            catch (HttpRequestException httpEx)
-            {
-                Console.WriteLine($"❌ Network error while fetching AMFI data: {httpEx.Message}");
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error fetching or processing AMFI data: {ex.Message}");
+                Console.WriteLine($"❌ Error processing or storing AMFI data: {ex.Message}");
             }
         }
 
@@ -107,6 +160,41 @@ namespace PortVault.Services.MutualFund
             }
 
             return funds;
+        }
+        private bool ShouldUpdate(DateTime lastNavUpdationTime)
+        {
+            lastNavUpdationTime = lastNavUpdationTime.AddHours(5).AddMinutes(30);
+            DateTime currentTimeInIst = DateTime.UtcNow.AddHours(5).AddMinutes(30);
+
+            int currentHourInIst = currentTimeInIst.Hour;
+            DateTime currentDateInIst = currentTimeInIst.Date;
+
+            if ((currentTimeInIst - lastNavUpdationTime).TotalHours >= 12)
+            {
+                return true;
+            }
+
+            if (lastNavUpdationTime.Hour < 10 && currentHourInIst >= 10 && lastNavUpdationTime.Date == currentDateInIst)
+            {
+                return true;
+            }
+
+            if (lastNavUpdationTime.Hour < 22 && currentHourInIst >= 22 && lastNavUpdationTime.Date == currentDateInIst)
+            {
+                return true;
+            }
+
+            if (lastNavUpdationTime.Date < currentDateInIst && currentHourInIst >= 10)
+            {
+                return true;
+            }
+
+            if (lastNavUpdationTime.Date < currentDateInIst && currentHourInIst >= 22)
+            {
+                return true; 
+            }
+
+            return false;
         }
     }
 }

@@ -21,6 +21,7 @@ namespace PortVault.Components.Pages
         protected override async Task OnInitializedAsync()
         {
             await MutualFundService.EnsureFundsExistAsync();
+            await MutualFundService.EnsureNavIsUpdated();
         }
 
         // Search function triggered when input text changes
@@ -50,6 +51,12 @@ namespace PortVault.Components.Pages
         private void RemoveFund(MutualFundModel fund)
         {
             selectedFunds.Remove(fund);
+        }
+        private async Task SavePortfolio()
+        {
+            // Save selectedFunds to database
+            // Clear selectedFunds
+            selectedFunds.Clear();
         }
     }   
 }

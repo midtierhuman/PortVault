@@ -10,7 +10,7 @@ namespace PortVault.Models
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public int? AmfiCode { get; set; }
+        public int? SchemeCode { get; set; }
         public string? MutualFundName { get; set; }
         public string? StockSymbol { get; set; }
         public string? StockName { get; set; }

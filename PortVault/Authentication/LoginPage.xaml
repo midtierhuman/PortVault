@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PortVault.Authentication.LoginPage"
+             BackgroundColor="#f4f4f4">
+    
+    <VerticalStackLayout Padding="30" Spacing="20"
+                         VerticalOptions="Center" HorizontalOptions="Center">
+        
+        <!-- App Logo -->
+        <Image Source="app_logo.png" HeightRequest="100" WidthRequest="100" 
+               HorizontalOptions="Center" />
+
+        <!-- Login Title -->
+        <Label Text="Login to PortVault" FontSize="24" 
+               FontAttributes="Bold" TextColor="#333" 
+               HorizontalOptions="Center" />
+
+        <!-- Email Input -->
+        <Entry x:Name="emailEntry" Placeholder="Email" 
+               Keyboard="Email" TextColor="#333"
+               BackgroundColor="White" HeightRequest="45"
+               Margin="0,5,0,0"/>
+
+        <!-- Password Input -->
+        <Entry x:Name="passwordEntry" Placeholder="Password" 
+               IsPassword="True" TextColor="#333"
+               BackgroundColor="White" HeightRequest="45"
+               Margin="0,5,0,0"/>
+
+        <!-- Login Button -->
+        <Button Text="Login" Clicked="OnLoginClicked" 
+                BackgroundColor="#007AFF" TextColor="White"
+                FontSize="18" CornerRadius="8" HeightRequest="50"
+                Margin="0,10,0,0"/>
+
+        <!-- Signup Link -->
+        <Label Text="Don't have an account? Sign up" 
+               FontSize="14" TextColor="#007AFF"
+               HorizontalOptions="Center">
+            <Label.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnSignupTapped"/>
+            </Label.GestureRecognizers>
+        </Label>
+
+    </VerticalStackLayout>
+
+</ContentPage>

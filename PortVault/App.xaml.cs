@@ -1,12 +1,25 @@
-﻿namespace PortVault
+﻿using Microsoft.Extensions.DependencyInjection;
+using PortVault.Authentication;
+
+namespace PortVault
 {
     public partial class App : Application
     {
-        public App()
+        public App(IServiceProvider serviceProvider)
         {
             InitializeComponent();
+            bool isUserLoggedIn = Preferences.Get("UserLoggedIn", false);
 
-            MainPage = new MainPage();
+            if (isUserLoggedIn)
+            {
+                MainPage = new MainPage(); // ✅ Load Blazor if logged in
+            }
+            else
+            {
+                MainPage = serviceProvider.GetService<LoginPage>(); // ✅ Show Login Page first
+            }
+
+            //MainPage = new MainPage();
         }
     }
 }

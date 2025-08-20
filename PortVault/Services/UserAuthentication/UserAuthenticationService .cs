@@ -15,7 +15,7 @@ namespace PortVault.Services.UserAuthentication
         public async Task<bool> AuthenticateUserAsync(string email, string password)
         {
             // TODO: Replace this with actual authentication logic (e.g., check DB)
-            if (email == "admin@portvault.com" && password == "portvault")
+            if (email == "admin" && password == "admin")
             {
                 Preferences.Set(AuthKey, true);
                 Preferences.Set(UserEmailKey, email);

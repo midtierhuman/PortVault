@@ -1,1 +1,55 @@
-<p>portfolio-details works!</p>
+<section class="pv-portfolio-details">
+  @if (portfolioDetails(); as d) {
+
+  <h2>{{ d.name }}</h2>
+
+  <mat-card>
+    <table mat-table [dataSource]="d.holdings">
+      <ng-container matColumnDef="instrument">
+        <th mat-header-cell *matHeaderCellDef>Instrument</th>
+        <td mat-cell *matCellDef="let h">{{ h.instrumentId }}</td>
+      </ng-container>
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let h">{{ h.name }}</td>
+      </ng-container>
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let h">{{ AssetType[h.type] }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="marketPrice">
+        <th mat-header-cell *matHeaderCellDef>Market Price</th>
+        <td mat-cell *matCellDef="let h">{{ h.marketPrice | currency : 'INR' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="lastUpdated">
+        <th mat-header-cell *matHeaderCellDef>Last Updated</th>
+        <td mat-cell *matCellDef="let h">{{ h.lastUpdated | date }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="action">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let h">
+          <button mat-button color="primary" (click)="openTransactions(h)">Edit</button>
+        </td>
+      </ng-container>
+
+      <tr
+        mat-header-row
+        *matHeaderRowDef="['instrument', 'name', 'type', 'marketPrice', 'lastUpdated', 'action']"
+      ></tr>
+      <tr
+        mat-row
+        *matRowDef="
+          let row;
+          columns: ['instrument', 'name', 'type', 'marketPrice', 'lastUpdated', 'action']
+        "
+      ></tr>
+    </table>
+  </mat-card>
+
+  } @else {
+  <p>Loading…</p>
+  }
+</section>

@@ -1,0 +1,57 @@
+<h3>Transactions — {{ data.instrumentId }}</h3>
+
+<div class="dialog-wrapper">
+  @for (tx of transactions(); let i = $index; track tx) {
+
+  <mat-form-field appearance="outline">
+    <mat-label>Type</mat-label>
+    <mat-select [ngModel]="tx.type" (ngModelChange)="updateField(i, 'type', $event)">
+      <mat-option value="buy">Buy</mat-option>
+      <mat-option value="sell">Sell</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Date</mat-label>
+    <input
+      matInput
+      type="date"
+      [ngModel]="tx.date | date : 'yyyy-MM-dd'"
+      (ngModelChange)="updateField(i, 'date', $event)"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Price</mat-label>
+    <input
+      matInput
+      type="number"
+      [ngModel]="tx.price"
+      (ngModelChange)="updateField(i, 'price', $event)"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Qty</mat-label>
+    <input
+      matInput
+      type="number"
+      [ngModel]="tx.qty"
+      (ngModelChange)="updateField(i, 'qty', $event)"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" disabled>
+    <mat-label>Total</mat-label>
+    <input matInput [value]="tx.price * tx.qty" />
+  </mat-form-field>
+
+  }
+
+  <button mat-button (click)="addBlank()">Add Row</button>
+</div>
+
+<div class="actions">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()">Save</button>
+</div>

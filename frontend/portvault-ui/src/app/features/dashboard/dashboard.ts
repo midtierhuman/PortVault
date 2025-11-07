@@ -1,14 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { Header } from '../../shared/ui/header/header';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   standalone: true,
-  imports: [CommonModule, MatCardModule, Header],
+  imports: [CommonModule, MatCardModule],
 })
 export class DashboardComponent {
   totalInvested = 215000;

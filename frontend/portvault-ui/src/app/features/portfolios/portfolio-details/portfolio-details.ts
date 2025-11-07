@@ -1,7 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PortfolioService } from '../../../core/services/portfolio.service';
-import { PortfolioDetails } from '../../../models/portfolio-details.model';
 import { CommonModule } from '@angular/common';
 import { AssetType } from '../../../models/asset-type.model';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Asset } from '../../../models/asset.model';
 import { MatDialog } from '@angular/material/dialog';
 import { TransactionDialogComponent } from './transaction-dialog/transaction-dialog';
+import { Holding } from '../../../models/holding.model';
 
 @Component({
   selector: 'app-portfolio-details',
@@ -22,7 +22,7 @@ export class PortfolioDetailsComponent {
   id: string | null = null;
   AssetType = AssetType;
 
-  portfolioDetails = signal<PortfolioDetails | null>(null);
+  holdings = signal<Holding[] | null>(null);
 
   constructor(
     private route: ActivatedRoute,
@@ -34,15 +34,15 @@ export class PortfolioDetailsComponent {
   ngOnInit() {
     this.id = this.route.snapshot.paramMap.get('id');
     if (this.id) {
-      this.fetchPortfolioDetails(this.id);
+      this.fetchHoldings(this.id);
     } else {
       this.router.navigate(['../']);
     }
   }
 
-  private fetchPortfolioDetails(id: string) {
-    this.portfolioService.getOne(id).then((p) => {
-      this.portfolioDetails.set(p);
+  private fetchHoldings(id: string) {
+    this.portfolioService.getHoldings(id).then((p) => {
+      this.holdings.set(p);
     });
   }
 

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PortVault.Api.Data;
+using PortVault.Api.Repositories;
+using PortVault.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,8 @@ builder.Services.AddCors(o =>
 });
 builder.Services.AddDbContext<AppDb>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
+builder.Services.AddScoped<IParserService, ParserService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

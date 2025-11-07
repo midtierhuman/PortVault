@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { PortfolioDetails } from '../../models/portfolio-details.model';
+import { Holding } from '../../models/holding.model';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {
@@ -13,8 +13,8 @@ export class PortfolioService {
     return firstValueFrom(this.#http.get<Portfolio[]>(this.#base));
   }
 
-  getOne(id: string) {
-    let v = firstValueFrom(this.#http.get<PortfolioDetails>(`${this.#base}/${id}`));
+  getHoldings(id: string) {
+    let v = firstValueFrom(this.#http.get<Holding[]>(`${this.#base}/${id}/holdings`));
     return v;
   }
 }

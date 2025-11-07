@@ -1,17 +1,36 @@
-﻿using PortVault.Api.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using PortVault.Api.Data;
+using PortVault.Api.Models;
 
 namespace PortVault.Api.Repositories
 {
     public class PortfolioRepository : IPortfolioRepository
     {
-        Task<IEnumerable<Portfolio>> IPortfolioRepository.GetAllPortfoliosAsync()
+        private readonly AppDb _db;
+        public PortfolioRepository(AppDb db) => _db = db;
+
+
+        public async Task<IEnumerable<Portfolio>> GetAllPortfoliosAsync()
         {
-            throw new NotImplementedException();
+            return await _db.Portfolios.ToListAsync();
         }
 
-        Task<Portfolio?> IPortfolioRepository.GetPortfolioByIdAsync(string portfolioId)
+        public async Task<Portfolio?> GetPortfolioByIdAsync(Guid portfolioId)
         {
-            throw new NotImplementedException();
+            return await _db.Portfolios.FirstOrDefaultAsync(x => x.Id == portfolioId);
+        }
+
+        public async Task<Portfolio> CreateAsync(Portfolio p)
+        {
+            _db.Portfolios.Add(p);
+            await _db.SaveChangesAsync();
+            return p;
+        }
+        public async Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId)
+        {
+            return await _db.Holdings
+                .Where(h => h.PortfolioId == portfolioId)
+                .ToArrayAsync();
         }
     }
 }

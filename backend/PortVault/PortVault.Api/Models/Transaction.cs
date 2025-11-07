@@ -2,7 +2,8 @@
 {
     public class Transaction
     {
-        public string Id { get; init; } = string.Empty;
+        public Guid Id { get; init; }
+        public Guid PortfolioId { get; init; }
         public string InstrumentId { get; init; } = string.Empty;
         public string Type { get; init; } = string.Empty; // 'buy' | 'sell'
         public DateTime Date { get; init; }

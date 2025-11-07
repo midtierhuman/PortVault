@@ -7,7 +7,11 @@ namespace PortVault.Api.Models
     public sealed class Portfolio
     {
         [JsonPropertyName("id")]
-        public string Id { get; init; } = string.Empty;
+        public Guid Id { get; init; }
+
+        [Required]
+        [JsonPropertyName("userId")]
+        public Guid UserId { get; init; }
 
         [Required]
         [JsonPropertyName("name")]

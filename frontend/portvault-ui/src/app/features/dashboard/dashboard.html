@@ -1,0 +1,29 @@
+<section class="pv-dashboard">
+  <h2>Dashboard</h2>
+
+  <div class="pv-grid">
+    <mat-card>
+      <h3>Total Invested</h3>
+      <p>{{ totalInvested | currency : 'INR' }}</p>
+    </mat-card>
+
+    <mat-card>
+      <h3>Current Value</h3>
+      <p>{{ currentValue | currency : 'INR' }}</p>
+    </mat-card>
+
+    <mat-card>
+      <h3>PnL</h3>
+      <p>{{ pnl | currency : 'INR' }}</p>
+    </mat-card>
+
+    <mat-card class="full">
+      <h3>Holdings snapshot</h3>
+      <ul>
+        <li *ngFor="let item of holdings">
+          {{ item.symbol }} → {{ item.value | currency : 'INR' }}
+        </li>
+      </ul>
+    </mat-card>
+  </div>
+</section>

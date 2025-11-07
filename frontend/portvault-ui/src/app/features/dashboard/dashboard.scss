@@ -1,0 +1,13 @@
+.pv-dashboard {
+  padding: 24px;
+}
+
+.pv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.full {
+  grid-column: span 2;
+}

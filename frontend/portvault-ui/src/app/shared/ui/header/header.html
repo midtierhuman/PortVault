@@ -1,0 +1,8 @@
+<mat-toolbar color="primary">
+  <span>PortVault</span>
+  <span class="flex-spacer"></span>
+
+  <button mat-button *ngFor="let b of navBtns" (click)="go(b.route)">
+    {{ b.label }}
+  </button>
+</mat-toolbar>

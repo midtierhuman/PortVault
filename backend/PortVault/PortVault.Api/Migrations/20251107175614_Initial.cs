@@ -12,22 +12,42 @@ namespace PortVault.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "PortfolioDetails",
+                name: "Assets",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    InstrumentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Nav = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Inav = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    MarketPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PortfolioDetails", x => x.Id);
+                    table.PrimaryKey("PK_Assets", x => x.InstrumentId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Holdings",
+                columns: table => new
+                {
+                    PortfolioId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InstrumentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Qty = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AvgPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Holdings", x => new { x.PortfolioId, x.InstrumentId });
                 });
 
             migrationBuilder.CreateTable(
                 name: "Portfolios",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Invested = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Current = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
@@ -41,7 +61,8 @@ namespace PortVault.Api.Migrations
                 name: "Transactions",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PortfolioId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     InstrumentId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -52,34 +73,6 @@ namespace PortVault.Api.Migrations
                 {
                     table.PrimaryKey("PK_Transactions", x => x.Id);
                 });
-
-            migrationBuilder.CreateTable(
-                name: "Assets",
-                columns: table => new
-                {
-                    InstrumentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Nav = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Inav = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    MarketPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PortfolioDetailsId = table.Column<string>(type: "nvarchar(450)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Assets", x => x.InstrumentId);
-                    table.ForeignKey(
-                        name: "FK_Assets_PortfolioDetails_PortfolioDetailsId",
-                        column: x => x.PortfolioDetailsId,
-                        principalTable: "PortfolioDetails",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Assets_PortfolioDetailsId",
-                table: "Assets",
-                column: "PortfolioDetailsId");
         }
 
         /// <inheritdoc />
@@ -89,13 +82,13 @@ namespace PortVault.Api.Migrations
                 name: "Assets");
 
             migrationBuilder.DropTable(
+                name: "Holdings");
+
+            migrationBuilder.DropTable(
                 name: "Portfolios");
 
             migrationBuilder.DropTable(
                 name: "Transactions");
-
-            migrationBuilder.DropTable(
-                name: "PortfolioDetails");
         }
     }
 }

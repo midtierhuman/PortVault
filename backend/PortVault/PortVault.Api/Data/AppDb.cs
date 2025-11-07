@@ -11,6 +11,12 @@ namespace PortVault.Api.Data
         public DbSet<Asset> Assets => Set<Asset>();
         public DbSet<Transaction> Transactions => Set<Transaction>();
         public DbSet<Holding> Holdings => Set<Holding>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Holding>()
+                .HasKey(h => new { h.PortfolioId, h.InstrumentId });
+        }
     }
 
 }

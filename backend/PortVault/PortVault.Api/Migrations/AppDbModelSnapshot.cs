@@ -43,23 +43,38 @@ namespace PortVault.Api.Migrations
                     b.Property<decimal?>("Nav")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("PortfolioDetailsId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
                     b.HasKey("InstrumentId");
 
-                    b.HasIndex("PortfolioDetailsId");
-
                     b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("PortVault.Api.Models.Holding", b =>
+                {
+                    b.Property<Guid>("PortfolioId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InstrumentId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("AvgPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Qty")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("PortfolioId", "InstrumentId");
+
+                    b.ToTable("Holdings");
                 });
 
             modelBuilder.Entity("PortVault.Api.Models.Portfolio", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
                         .HasAnnotation("Relational:JsonPropertyName", "id");
 
                     b.Property<decimal>("Current")
@@ -75,29 +90,20 @@ namespace PortVault.Api.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasAnnotation("Relational:JsonPropertyName", "name");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasAnnotation("Relational:JsonPropertyName", "userId");
+
                     b.HasKey("Id");
 
                     b.ToTable("Portfolios");
                 });
 
-            modelBuilder.Entity("PortVault.Api.Models.PortfolioDetails", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PortfolioDetails");
-                });
-
             modelBuilder.Entity("PortVault.Api.Models.Transaction", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
@@ -105,6 +111,9 @@ namespace PortVault.Api.Migrations
                     b.Property<string>("InstrumentId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PortfolioId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
@@ -119,18 +128,6 @@ namespace PortVault.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Transactions");
-                });
-
-            modelBuilder.Entity("PortVault.Api.Models.Asset", b =>
-                {
-                    b.HasOne("PortVault.Api.Models.PortfolioDetails", null)
-                        .WithMany("Holdings")
-                        .HasForeignKey("PortfolioDetailsId");
-                });
-
-            modelBuilder.Entity("PortVault.Api.Models.PortfolioDetails", b =>
-                {
-                    b.Navigation("Holdings");
                 });
 #pragma warning restore 612, 618
         }

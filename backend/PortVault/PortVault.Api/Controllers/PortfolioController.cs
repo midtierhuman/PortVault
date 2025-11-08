@@ -56,17 +56,26 @@ namespace PortVault.Api.Controllers
         [HttpPost("{id:guid}/transactions/upload")]
         public async Task<IActionResult> Upload(Guid id, IFormFile file)
         {
-            if (file is null || file.Length == 0)
+            if (file == null || file.Length == 0)
                 return BadRequest("no file");
 
-            using var stream = file.OpenReadStream();
+            try
+            {
+                await using var stream = file.OpenReadStream();
 
-            var txns = _parser.Parse(stream, id); // your EPPlus parser
+                var txns = _parser.Parse(stream, id);
 
-            //await _repo.(txns);
+                //await _repo.AddTransactionsAsync(txns);
 
-            return Ok();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // optional: log ex.Message
+                return StatusCode(500, "parse_failed");
+            }
         }
+
     }
 
 }

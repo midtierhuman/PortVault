@@ -121,9 +121,11 @@ namespace PortVault.Api.Migrations
                     b.Property<decimal>("Qty")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("TradeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TradeType")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

@@ -12,7 +12,7 @@ using PortVault.Api.Data;
 namespace PortVault.Api.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20251107175614_Initial")]
+    [Migration("20251108070534_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -124,9 +124,11 @@ namespace PortVault.Api.Migrations
                     b.Property<decimal>("Qty")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("TradeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TradeType")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

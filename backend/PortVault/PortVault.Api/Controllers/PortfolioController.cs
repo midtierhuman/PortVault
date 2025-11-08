@@ -40,14 +40,15 @@ namespace PortVault.Api.Controllers
             return Ok(result);
         }
 
-        [HttpPost]
+        [HttpPost("create-portfolio")]
         public async Task<IActionResult> Create([FromBody] Portfolio portfolio)
         {
             var created = await _repo.CreateAsync(portfolio);
             return CreatedAtAction(nameof(GetOne), new { id = created.Id }, created);
         }
+
         [HttpGet("{id:guid}/getholdings")]
-        public async Task<IActionResult> GetHoldings([FromBody] Guid id)
+        public async Task<IActionResult> GetHoldings(Guid id)
         {
             var result = await _repo.GetHoldingsByPortfolioIdAsync(id);
             return Ok(result);
@@ -65,7 +66,7 @@ namespace PortVault.Api.Controllers
 
                 var txns = _parser.Parse(stream, id);
 
-                //await _repo.AddTransactionsAsync(txns);
+                await _repo.AddTransactionsAsync(txns);
 
                 return Ok();
             }

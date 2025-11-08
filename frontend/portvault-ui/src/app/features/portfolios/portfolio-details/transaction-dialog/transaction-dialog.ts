@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { Asset } from '../../../../models/asset.model';
 import { Transaction } from '../../../../models/transaction.model';
+import { tradeType } from '../../../../models/trade-type.model';
 
 @Component({
   standalone: true,
@@ -39,7 +40,7 @@ export class TransactionDialogComponent {
       {
         id: '',
         instrumentId: this.data.instrumentId,
-        type: 'buy',
+        type: tradeType.Buy,
         date: new Date(),
         price: 0,
         qty: 0,

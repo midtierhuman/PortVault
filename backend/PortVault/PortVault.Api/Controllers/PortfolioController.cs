@@ -6,6 +6,7 @@ using PortVault.Api.Models;
 namespace PortVault.Api.Controllers
 {
     using Microsoft.AspNetCore.Mvc;
+    using PortVault.Api.Parsers;
     using PortVault.Api.Repositories;
     using PortVault.Api.Services;
 
@@ -14,12 +15,12 @@ namespace PortVault.Api.Controllers
     public sealed class PortfolioController : ControllerBase
     {
         private readonly IPortfolioRepository _repo;
-        private readonly IParserService _parser;
+        private readonly TradeParserFactory _factory;
 
-        public PortfolioController(IPortfolioRepository repo, IParserService parserService)
+        public PortfolioController(IPortfolioRepository repo, TradeParserFactory tradeParserFactory)
         {
             _repo = repo;
-            _parser = parserService;
+            _factory = tradeParserFactory;
         }
 
         [HttpGet]
@@ -54,8 +55,8 @@ namespace PortVault.Api.Controllers
             return Ok(result);
         }
 
-        [HttpPost("{id:guid}/transactions/upload")]
-        public async Task<IActionResult> Upload(Guid id, IFormFile file)
+        [HttpPost("{id:guid}/transactions/upload/{provider}")]
+        public async Task<IActionResult> Upload(Guid id,string provider, IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("no file");
@@ -63,8 +64,8 @@ namespace PortVault.Api.Controllers
             try
             {
                 await using var stream = file.OpenReadStream();
-
-                var txns = _parser.Parse(stream, id);
+                var parser = _factory.Get(provider);
+                var txns = parser.Parse(stream, id);
 
                 await _repo.AddTransactionsAsync(txns);
 
@@ -72,9 +73,14 @@ namespace PortVault.Api.Controllers
             }
             catch (Exception ex)
             {
-                // optional: log ex.Message
-                return StatusCode(500, "parse_failed");
+                return StatusCode(500, ex.Message);
             }
+        }
+        [HttpPut("{id}/holdings/recalculate")]
+        public async Task<IActionResult> RecalculateHoldings(Guid id)
+        {
+            await _repo.RecalculateHolding(id);
+            return Ok();
         }
 
     }

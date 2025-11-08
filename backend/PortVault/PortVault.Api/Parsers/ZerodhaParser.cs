@@ -1,11 +1,11 @@
 ﻿using OfficeOpenXml;
 using PortVault.Api.Models;
-using System.ComponentModel;
 
-namespace PortVault.Api.Services
+namespace PortVault.Api.Parsers
 {
-    public class ParserService : IParserService
+    public class ZerodhaParser : ITradeParser
     {
+        public string Provider => "Zerodha";
         public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId)
         {
             new EPPlusLicense().SetNonCommercialPersonal("Subhadip"); // or whatever string u want
@@ -42,6 +42,5 @@ namespace PortVault.Api.Services
 
             return list;
         }
-
     }
 }

@@ -9,5 +9,6 @@ namespace PortVault.Api.Repositories
         Task<Portfolio> CreateAsync(Portfolio p);
         Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId);
         Task<int> AddTransactionsAsync(IEnumerable<Transaction> transactions);
+        Task<bool> RecalculateHolding(Guid portfolioId);
     }
 }

@@ -2,6 +2,7 @@
 {
     public class Holding
     {
+        public Guid Id { get; set; }
         public Guid PortfolioId { get; set; }
         public string InstrumentId { get; set; } = string.Empty;
 

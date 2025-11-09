@@ -20,6 +20,7 @@ builder.Services.AddDbContext<AppDb>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 builder.Services.AddScoped<ITradeParser, ZerodhaParser>();
+builder.Services.AddScoped<ITradeParser, CamsKfinCasParser>();
 builder.Services.AddScoped<TradeParserFactory>();
 var app = builder.Build();
 

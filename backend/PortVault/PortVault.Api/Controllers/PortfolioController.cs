@@ -56,7 +56,7 @@ namespace PortVault.Api.Controllers
         }
 
         [HttpPost("{id:guid}/transactions/upload/{provider}")]
-        public async Task<IActionResult> Upload(Guid id,string provider, IFormFile file)
+        public async Task<IActionResult> Upload(Guid id,string provider, IFormFile file, [FromQuery] string? pwd)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("no file");
@@ -65,7 +65,7 @@ namespace PortVault.Api.Controllers
             {
                 await using var stream = file.OpenReadStream();
                 var parser = _factory.Get(provider);
-                var txns = parser.Parse(stream, id);
+                var txns = parser.Parse(stream, id, pwd);
 
                 await _repo.AddTransactionsAsync(txns);
 

@@ -6,7 +6,7 @@ namespace PortVault.Api.Parsers
     public class ZerodhaParser : ITradeParser
     {
         public string Provider => "Zerodha";
-        public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId)
+        public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId, string? password = null)
         {
             new EPPlusLicense().SetNonCommercialPersonal("Subhadip"); // or whatever string u want
 

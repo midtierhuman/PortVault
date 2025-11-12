@@ -9,6 +9,7 @@ namespace PortVault.Api.Controllers
     using PortVault.Api.Parsers;
     using PortVault.Api.Repositories;
     using PortVault.Api.Services;
+    using System.ComponentModel;
 
     [Route("api/[controller]")]
     [ApiController]
@@ -55,17 +56,20 @@ namespace PortVault.Api.Controllers
             return Ok(result);
         }
 
-        [HttpPost("{id:guid}/transactions/upload/{provider}")]
-        public async Task<IActionResult> Upload(Guid id,string provider, IFormFile file, [FromQuery] string? pwd)
+        //[HttpPost("{id:guid}/transactions/upload/{provider}")]
+        //public async Task<IActionResult> Upload(Guid id,string provider, IFormFile file, [FromQuery] string? pwd)
+        [HttpPost("transactions/upload")]
+        public async Task<IActionResult> Upload( IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("no file");
 
             try
             {
+                Guid id = Guid.Parse("3FA85F64-5717-4562-B3FC-2C963F66AFA6");
                 await using var stream = file.OpenReadStream();
-                var parser = _factory.Get(provider);
-                var txns = parser.Parse(stream, id, pwd);
+                var parser = _factory.Get("camskfin");
+                var txns = parser.Parse(stream, id, "hello1234");
 
                 await _repo.AddTransactionsAsync(txns);
 

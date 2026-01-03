@@ -29,19 +29,37 @@ namespace PortVault.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _repo.GetAllPortfoliosAsync();
-            return Ok(result);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var result = await _repo.GetAllPortfoliosAsync(userId);
+            return Ok(result.Select(x => new PortfolioResponse 
+            { 
+                Name = x.Name, 
+                Invested = x.Invested, 
+                Current = x.Current 
+            }));
         }
 
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetOne(Guid id)
+        [HttpGet("{name}")]
+        public async Task<IActionResult> GetOne(string name)
         {
-            var result = await _repo.GetPortfolioByIdAsync(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var result = await _repo.GetByNameAsync(name, userId);
 
             if (result is null)
                 return NotFound();
 
-            return Ok(result);
+            return Ok(new PortfolioResponse 
+            { 
+                Name = result.Name, 
+                Invested = result.Invested, 
+                Current = result.Current 
+            });
         }
 
         [HttpPost("create-portfolio")]
@@ -54,19 +72,44 @@ namespace PortVault.Api.Controllers
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
-            var created = await _repo.CreateAsync(request.Name, userId);
-            return CreatedAtAction(nameof(GetOne), new { id = created.Id }, created);
+            try
+            {
+                var created = await _repo.CreateAsync(request.Name, userId);
+                var response = new PortfolioResponse 
+                { 
+                    Name = created.Name, 
+                    Invested = created.Invested, 
+                    Current = created.Current 
+                };
+                return CreatedAtAction(nameof(GetOne), new { name = created.Name }, response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { error = ex.Message });
+            }
         }
 
-        [HttpGet("{id:guid}/getholdings")]
-        public async Task<IActionResult> GetHoldings(Guid id)
+        [HttpGet("{name}/getholdings")]
+        public async Task<IActionResult> GetHoldings(string name)
         {
-            var result = await _repo.GetHoldingsByPortfolioIdAsync(id);
-            return Ok(result);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            var result = await _repo.GetHoldingsByPortfolioIdAsync(portfolio.Id);
+            return Ok(result.Select(x => new HoldingResponse
+            {
+                InstrumentId = x.InstrumentId,
+                Qty = x.Qty,
+                AvgPrice = x.AvgPrice
+            }));
         }
 
-        [HttpPost("{portfolioId:guid}/transactions/upload")]
-        public async Task<IActionResult> Upload(Guid portfolioId, IFormFile file)
+        [HttpPost("{name}/transactions/upload")]
+        public async Task<IActionResult> Upload(string name, IFormFile file)
         {
             if (file is null || file.Length == 0)
                 return BadRequest("No file uploaded.");
@@ -76,15 +119,19 @@ namespace PortVault.Api.Controllers
             if (extension != ".xlsx" && extension != ".xls")
                 return BadRequest("Only Excel files (.xlsx, .xls) are supported.");
 
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
             try
             {
                 // Verify portfolio exists
-                var portfolio = await _repo.GetPortfolioByIdAsync(portfolioId);
+                var portfolio = await _repo.GetByNameAsync(name, userId);
                 if (portfolio is null)
-                    return NotFound($"Portfolio with ID {portfolioId} not found.");
+                    return NotFound($"Portfolio '{name}' not found.");
 
                 await using var stream = file.OpenReadStream();
-                var txns = _parser.Parse(stream, portfolioId, null);
+                var txns = _parser.Parse(stream, portfolio.Id, null);
 
                 var addedCount = await _repo.AddTransactionsAsync(txns);
 
@@ -100,10 +147,17 @@ namespace PortVault.Api.Controllers
                 return StatusCode(500, new { error = ex.Message, details = ex.InnerException?.Message });
             }
         }
-        [HttpPut("{id}/holdings/recalculate")]
-        public async Task<IActionResult> RecalculateHoldings(Guid id)
+        [HttpPut("{name}/holdings/recalculate")]
+        public async Task<IActionResult> RecalculateHoldings(string name)
         {
-            await _repo.RecalculateHolding(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            await _repo.RecalculateHolding(portfolio.Id);
             return Ok();
         }
 

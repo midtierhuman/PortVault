@@ -25,6 +25,10 @@ namespace PortVault.Api.Data
 
             modelBuilder.Entity<Holding>()
                 .HasKey(h => new { h.PortfolioId, h.InstrumentId });
+
+            modelBuilder.Entity<Portfolio>()
+                .HasIndex(p => new { p.UserId, p.Name })
+                .IsUnique();
         }
     }
 

@@ -11,9 +11,9 @@ namespace PortVault.Api.Repositories
         public PortfolioRepository(AppDb db) => _db = db;
 
 
-        public async Task<IEnumerable<Portfolio>> GetAllPortfoliosAsync()
+        public async Task<IEnumerable<Portfolio>> GetAllPortfoliosAsync(Guid userId)
         {
-            return await _db.Portfolios.ToListAsync();
+            return await _db.Portfolios.Where(x => x.UserId == userId).ToListAsync();
         }
 
         public async Task<Portfolio?> GetPortfolioByIdAsync(Guid portfolioId)
@@ -21,8 +21,16 @@ namespace PortVault.Api.Repositories
             return await _db.Portfolios.FirstOrDefaultAsync(x => x.Id == portfolioId);
         }
 
+        public async Task<Portfolio?> GetByNameAsync(string name, Guid userId)
+        {
+            return await _db.Portfolios.FirstOrDefaultAsync(x => x.Name == name && x.UserId == userId);
+        }
+
         public async Task<Portfolio> CreateAsync(string name, Guid userId)
         {
+            if (await _db.Portfolios.AnyAsync(x => x.Name == name && x.UserId == userId))
+                throw new InvalidOperationException($"Portfolio '{name}' already exists.");
+
             var portfolio = new Portfolio
             {
                 Id = Guid.NewGuid(),

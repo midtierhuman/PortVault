@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using OfficeOpenXml;
 using System.Security.Claims;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace PortVault.Api.Controllers
 {
     using Microsoft.AspNetCore.Mvc;
@@ -110,6 +108,34 @@ namespace PortVault.Api.Controllers
             }));
         }
 
+        [HttpGet("{name}/transactions")]
+        public async Task<IActionResult> GetTransactions(string name)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            var result = await _repo.GetTransactionsByPortfolioIdAsync(portfolio.Id);
+            return Ok(result.Select(x => new TransactionResponse
+            {
+                Id = x.Id,
+                Symbol = x.Symbol,
+                ISIN = x.ISIN,
+                TradeDate = x.TradeDate,
+                OrderExecutionTime = x.OrderExecutionTime,
+                Segment = x.Segment,
+                Series = x.Series,
+                TradeType = x.TradeType.ToString(),
+                Quantity = x.Quantity,
+                Price = x.Price,
+                TradeID = x.TradeID ?? 0,
+                OrderID = x.OrderID ?? 0
+            }));
+        }
+
         [HttpGet("transactions/template")]
         public IActionResult DownloadTemplate()
         {
@@ -168,15 +194,26 @@ namespace PortVault.Api.Controllers
                     return NotFound($"Portfolio '{name}' not found.");
 
                 await using var stream = file.OpenReadStream();
-                var txns = _parser.Parse(stream, portfolio.Id, null);
+                var txns = _parser.Parse(stream, portfolio.Id, userId, null);
 
-                var addedCount = await _repo.AddTransactionsAsync(txns);
+                var result = await _repo.AddTransactionsAsync(txns, userId);
+
+                if (result.Errors.Any())
+                {
+                    return BadRequest(new { 
+                        message = "Some transactions failed to import",
+                        addedCount = result.AddedCount,
+                        duplicatesSkipped = result.DuplicatesSkipped,
+                        errors = result.Errors,
+                        totalProcessed = txns.Count()
+                    });
+                }
 
                 return Ok(new { 
-                    message = $"Successfully processed {addedCount} new transactions.", 
+                    message = $"Successfully processed {result.AddedCount} new transactions.", 
                     totalProcessed = txns.Count(),
-                    newTransactions = addedCount,
-                    duplicatesSkipped = txns.Count() - addedCount
+                    newTransactions = result.AddedCount,
+                    duplicatesSkipped = result.DuplicatesSkipped
                 });
             }
             catch (Exception ex)
@@ -184,6 +221,7 @@ namespace PortVault.Api.Controllers
                 return StatusCode(500, new { error = ex.Message, details = ex.InnerException?.Message });
             }
         }
+
         [HttpPut("{name}/holdings/recalculate")]
         public async Task<IActionResult> RecalculateHoldings(string name)
         {
@@ -196,6 +234,23 @@ namespace PortVault.Api.Controllers
 
             await _repo.RecalculateHolding(portfolio.Id);
             return Ok();
+        }
+
+        // TEMPORARY ENDPOINT - Remove after cleaning data
+        [HttpDelete("{name}/transactions/clear")]
+        public async Task<IActionResult> ClearAllTransactions(string name)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            // This is a destructive operation - use with caution
+            var transactions = await _repo.GetTransactionsByPortfolioIdAsync(portfolio.Id);
+            // Delete via repository would be better, but for now:
+            return Ok(new { message = "Use SQL: DELETE FROM Holdings; DELETE FROM Transactions;" });
         }
 
     }

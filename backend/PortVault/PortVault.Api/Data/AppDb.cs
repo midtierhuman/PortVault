@@ -29,7 +29,29 @@ namespace PortVault.Api.Data
             modelBuilder.Entity<Portfolio>()
                 .HasIndex(p => new { p.UserId, p.Name })
                 .IsUnique();
+
+            // Unique constraint for STOCKS (when TradeID exists) - Use ONLY TradeID
+            modelBuilder.Entity<Transaction>()
+                .HasIndex(t => new { t.PortfolioId, t.TradeID })
+                .IsUnique()
+                .HasFilter("[TradeID] IS NOT NULL")
+                .HasDatabaseName("IX_Transaction_StockUnique");
+
+            // Unique constraint for MUTUAL FUNDS (when TradeID is null)
+            modelBuilder.Entity<Transaction>()
+                .HasIndex(t => new {
+                    t.PortfolioId,
+                    t.ISIN,
+                    t.TradeDate,
+                    t.TradeType,
+                    t.Quantity,
+                    t.Price
+                })
+                .IsUnique()
+                .HasFilter("[TradeID] IS NULL")
+                .HasDatabaseName("IX_Transaction_MFUnique");
         }
     }
 
 }
+

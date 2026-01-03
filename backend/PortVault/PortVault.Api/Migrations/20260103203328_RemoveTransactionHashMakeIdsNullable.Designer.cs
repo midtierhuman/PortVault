@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PortVault.Api.Data;
 
@@ -11,9 +12,11 @@ using PortVault.Api.Data;
 namespace PortVault.Api.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20260103203328_RemoveTransactionHashMakeIdsNullable")]
+    partial class RemoveTransactionHashMakeIdsNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -194,15 +197,15 @@ namespace PortVault.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PortfolioId", "TradeID")
+                    b.HasIndex("PortfolioId", "TradeID", "OrderID")
                         .IsUnique()
                         .HasDatabaseName("IX_Transaction_StockUnique")
-                        .HasFilter("[TradeID] IS NOT NULL");
+                        .HasFilter("[TradeID] IS NOT NULL AND [OrderID] IS NOT NULL");
 
                     b.HasIndex("PortfolioId", "ISIN", "TradeDate", "TradeType", "Quantity", "Price")
                         .IsUnique()
                         .HasDatabaseName("IX_Transaction_MFUnique")
-                        .HasFilter("[TradeID] IS NULL");
+                        .HasFilter("[TradeID] IS NULL AND [OrderID] IS NULL");
 
                     b.ToTable("Transactions");
                 });

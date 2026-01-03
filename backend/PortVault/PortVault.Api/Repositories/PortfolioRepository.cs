@@ -2,6 +2,7 @@
 using PortVault.Api.Data;
 using PortVault.Api.Models;
 using System.Text;
+using Microsoft.Data.SqlClient;
 
 namespace PortVault.Api.Repositories
 {
@@ -43,6 +44,7 @@ namespace PortVault.Api.Repositories
             await _db.SaveChangesAsync();
             return portfolio;
         }
+        
         public async Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId)
         {
             var holdings = await _db.Holdings
@@ -73,34 +75,47 @@ namespace PortVault.Api.Repositories
 
             return holdings;
         }
-        public async Task<int> AddTransactionsAsync(IEnumerable<Transaction> transactions)
+
+        public async Task<Transaction[]> GetTransactionsByPortfolioIdAsync(Guid portfolioId)
         {
-            try
-            {
-                var transactionHashes = transactions.Select(x => x.TransactionHash).ToList();
-
-                var existing = await _db.Transactions
-                    .Where(x => transactionHashes.Contains(x.TransactionHash))
-                    .Select(x => x.TransactionHash)
-                    .ToListAsync();
-
-                var existingSet = existing.ToHashSet();
-
-                var newOnes = transactions
-                    .Where(x => !existingSet.Contains(x.TransactionHash))
-                    .ToList();
-
-                if (newOnes.Count == 0) return 0;
-
-                _db.Transactions.AddRange(newOnes);
-                return await _db.SaveChangesAsync();
-            }
-            catch (Exception e)
-            { 
-                var msg = e.Message;
-                return 0;
-            }
+            return await _db.Transactions
+                .Where(t => t.PortfolioId == portfolioId)
+                .OrderByDescending(t => t.TradeDate)
+                .ThenByDescending(t => t.OrderExecutionTime)
+                .ToArrayAsync();
         }
+
+        public async Task<(int AddedCount, int DuplicatesSkipped, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId)
+        {
+            var addedCount = 0;
+            var duplicatesSkipped = 0;
+            var errors = new List<string>();
+            
+            foreach (var txn in transactions)
+            {
+                try
+                {
+                    _db.Transactions.Add(txn);
+                    await _db.SaveChangesAsync();
+                    addedCount++;
+                }
+                catch (DbUpdateException ex) 
+                    when (ex.InnerException is SqlException sqlEx && 
+                          (sqlEx.Number == 2601 || sqlEx.Number == 2627)) // Unique constraint violation
+                {
+                    duplicatesSkipped++;
+                    // Log which transaction was skipped for debugging
+                    Console.WriteLine($"Duplicate transaction skipped: {txn.Symbol} ({txn.ISIN}) on {txn.TradeDate:yyyy-MM-dd} - Qty: {txn.Quantity} @ {txn.Price}");
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{txn.Symbol} on {txn.TradeDate:yyyy-MM-dd}: {ex.Message}");
+                }
+            }
+            
+            return (addedCount, duplicatesSkipped, errors);
+        }
+        
         public async Task<bool> RecalculateHolding(Guid portfolioId)
         {
             var txns = await _db.Transactions

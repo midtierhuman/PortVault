@@ -8,12 +8,11 @@ namespace PortVault.Api.Parsers
     {
         public string Provider => "unified";
 
-        public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId, string? password = null)
+        public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId, Guid userId, string? password = null)
         {
             ExcelPackage.License.SetNonCommercialOrganization("PortVault");
 
             var transactions = new List<Transaction>();
-            var seenHashes = new HashSet<string>();
 
             using var package = new ExcelPackage(stream);
 
@@ -87,28 +86,19 @@ namespace PortVault.Api.Parsers
                     if (!decimal.TryParse(priceValue.Replace(",", ""), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
                         continue;
 
-                    long.TryParse(tradeIdValue, out var tradeId);
-                    long.TryParse(orderIdValue, out var orderId);
-
-                    var transactionHash = Transaction.GenerateTransactionHash(
-                        isin, 
-                        tradeDate.Value, 
-                        executionTime, 
-                        price, 
-                        tradeType, 
-                        quantity,
-                        tradeId,
-                        orderId
-                    );
-
-                    // Check for duplicates within the file
-                    if (!seenHashes.Add(transactionHash))
-                        continue;
+                    // Parse TradeID and OrderID as nullable
+                    long? tradeId = null;
+                    long? orderId = null;
+                    
+                    if (!string.IsNullOrEmpty(tradeIdValue) && long.TryParse(tradeIdValue, out var tid))
+                        tradeId = tid;
+                    
+                    if (!string.IsNullOrEmpty(orderIdValue) && long.TryParse(orderIdValue, out var oid))
+                        orderId = oid;
 
                     var transaction = new Transaction
                     {
                         Id = Guid.NewGuid(),
-                        TransactionHash = transactionHash,
                         PortfolioId = portfolioId,
                         Symbol = symbol,
                         ISIN = isin,

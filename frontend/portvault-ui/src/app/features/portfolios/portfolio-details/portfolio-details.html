@@ -1,11 +1,15 @@
 <section class="pv-portfolio-details">
-  @if (holdings(); as list) {
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+  } @else if (holdings(); as list) {
 
   <mat-card>
     <table mat-table [dataSource]="list">
       <ng-container matColumnDef="instrument">
         <th mat-header-cell *matHeaderCellDef>Instrument</th>
-        <td mat-cell *matCellDef="let h">{{ h.instrumentId }}</td>
+        <td mat-cell *matCellDef="let h">{{ h.symbol }}</td>
       </ng-container>
 
       <ng-container matColumnDef="qty">
@@ -14,13 +18,13 @@
       </ng-container>
 
       <ng-container matColumnDef="marketPrice">
-        <th mat-header-cell *matHeaderCellDef>Market Price</th>
-        <td mat-cell *matCellDef="let h">{{ h.marketPrice | currency : 'INR' }}</td>
+        <th mat-header-cell *matHeaderCellDef>Avg Price</th>
+        <td mat-cell *matCellDef="let h">{{ h.avgPrice | currency : 'INR' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="value">
         <th mat-header-cell *matHeaderCellDef>Value</th>
-        <td mat-cell *matCellDef="let h">{{ h.qty * h.marketPrice | currency : 'INR' }}</td>
+        <td mat-cell *matCellDef="let h">{{ h.qty * h.avgPrice | currency : 'INR' }}</td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="['instrument', 'qty', 'marketPrice', 'value']"></tr>

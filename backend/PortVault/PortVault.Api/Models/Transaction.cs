@@ -21,18 +21,14 @@ namespace PortVault.Api.Models
         public TradeType TradeType { get; init; }
         public decimal Quantity { get; init; }
         public decimal Price { get; init; }
-        
-        // Backward compatibility
-        public string InstrumentId => ISIN; // Use ISIN as the instrument identifier
-        public DateTime Date => TradeDate;
-        public decimal Qty => Quantity;
-        
+        public long TradeID { get; init; } = 0;
+        public long OrderID { get; init; } = 0;
         /// <summary>
         /// Generates a unique hash for the transaction based on key fields
         /// </summary>
-        public static string GenerateTransactionHash(string isin, DateTime tradeDate, DateTime? executionTime, decimal price, TradeType tradeType, decimal quantity)
+        public static string GenerateTransactionHash(string isin, DateTime tradeDate, DateTime? executionTime, decimal price, TradeType tradeType, decimal quantity, long tradeId, long orderId)
         {
-            var compositeKey = $"{isin}|{tradeDate:yyyyMMdd}|{executionTime?.ToString("HHmmss")}|{price}|{tradeType}|{quantity}";
+            var compositeKey = $"{isin}|{tradeDate:yyyyMMdd}|{executionTime?.ToString("HHmmss")}|{price}|{tradeType}|{quantity}|{tradeId}|{orderId}";
             var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(compositeKey));
             return Convert.ToHexString(hashBytes);
         }

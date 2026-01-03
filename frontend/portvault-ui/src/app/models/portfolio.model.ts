@@ -1,7 +1,5 @@
-type Portfolio = {
-  id: string;
-  userId: string;
-  name: string;
+export interface Portfolio {
+  name: string; // Unique identifier
   invested: number;
   current: number;
-};
+}

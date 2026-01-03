@@ -5,7 +5,7 @@ namespace PortVault.Api.Models
     public class Asset
     {
         [Key]
-        public string InstrumentId { get; init; } = string.Empty; // ISIN or SYMBOL
+        public string ISIN { get; init; } = string.Empty; // ISIN or SYMBOL
         public AssetType Type { get; init; }
         public string Name { get; init; } = string.Empty;
 

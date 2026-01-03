@@ -1,0 +1,169 @@
+<div class="auth-container">
+  <div class="auth-card-wrapper">
+    <mat-card class="auth-card">
+      <mat-card-header>
+        <div class="header-content">
+          <mat-icon class="logo-icon">account_balance_wallet</mat-icon>
+          <h1>PortVault</h1>
+          <p class="subtitle">Manage your investment portfolio with confidence</p>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-tab-group animationDuration="300ms" dynamicHeight>
+          <!-- Login Tab -->
+          <mat-tab label="Login">
+            <div class="tab-content">
+              <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Email or Username</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="emailOrUsername"
+                    placeholder="Enter your email or username"
+                    autocomplete="username"
+                  />
+                  <mat-icon matPrefix>person</mat-icon>
+                  @if (getLoginErrorMessage('emailOrUsername')) {
+                  <mat-error>{{ getLoginErrorMessage('emailOrUsername') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Password</mat-label>
+                  <input
+                    matInput
+                    [type]="hideLoginPassword() ? 'password' : 'text'"
+                    formControlName="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                  />
+                  <mat-icon matPrefix>lock</mat-icon>
+                  <button
+                    mat-icon-button
+                    matSuffix
+                    type="button"
+                    (click)="hideLoginPassword.set(!hideLoginPassword())"
+                    [attr.aria-label]="'Hide password'"
+                  >
+                    <mat-icon>{{ hideLoginPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                  @if (getLoginErrorMessage('password')) {
+                  <mat-error>{{ getLoginErrorMessage('password') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <button
+                  mat-raised-button
+                  color="primary"
+                  type="submit"
+                  class="full-width submit-button"
+                  [disabled]="isLoading()"
+                >
+                  @if (isLoading()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                  } @else {
+                  <span>Login</span>
+                  }
+                </button>
+              </form>
+            </div>
+          </mat-tab>
+
+          <!-- Register Tab -->
+          <mat-tab label="Register">
+            <div class="tab-content">
+              <form [formGroup]="registerForm" (ngSubmit)="onRegister()">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Username</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    formControlName="username"
+                    placeholder="Choose a username"
+                    autocomplete="username"
+                  />
+                  <mat-icon matPrefix>person</mat-icon>
+                  @if (getRegisterErrorMessage('username')) {
+                  <mat-error>{{ getRegisterErrorMessage('username') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Email</mat-label>
+                  <input
+                    matInput
+                    type="email"
+                    formControlName="email"
+                    placeholder="Enter your email"
+                    autocomplete="email"
+                  />
+                  <mat-icon matPrefix>email</mat-icon>
+                  @if (getRegisterErrorMessage('email')) {
+                  <mat-error>{{ getRegisterErrorMessage('email') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Password</mat-label>
+                  <input
+                    matInput
+                    [type]="hideRegisterPassword() ? 'password' : 'text'"
+                    formControlName="password"
+                    placeholder="Create a password"
+                    autocomplete="new-password"
+                  />
+                  <mat-icon matPrefix>lock</mat-icon>
+                  <button
+                    mat-icon-button
+                    matSuffix
+                    type="button"
+                    (click)="hideRegisterPassword.set(!hideRegisterPassword())"
+                    [attr.aria-label]="'Hide password'"
+                  >
+                    <mat-icon>{{
+                      hideRegisterPassword() ? 'visibility_off' : 'visibility'
+                    }}</mat-icon>
+                  </button>
+                  @if (getRegisterErrorMessage('password')) {
+                  <mat-error>{{ getRegisterErrorMessage('password') }}</mat-error>
+                  }
+                </mat-form-field>
+
+                <button
+                  mat-raised-button
+                  color="primary"
+                  type="submit"
+                  class="full-width submit-button"
+                  [disabled]="isLoading()"
+                >
+                  @if (isLoading()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                  } @else {
+                  <span>Create Account</span>
+                  }
+                </button>
+              </form>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="features">
+      <div class="feature-item">
+        <mat-icon>trending_up</mat-icon>
+        <span>Track Performance</span>
+      </div>
+      <div class="feature-item">
+        <mat-icon>analytics</mat-icon>
+        <span>Analyze Investments</span>
+      </div>
+      <div class="feature-item">
+        <mat-icon>security</mat-icon>
+        <span>Secure & Private</span>
+      </div>
+    </div>
+  </div>
+</div>

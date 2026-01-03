@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PortVault.Api.Models;
 using Microsoft.AspNetCore.Authorization;
+using OfficeOpenXml;
 using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -102,10 +103,46 @@ namespace PortVault.Api.Controllers
             var result = await _repo.GetHoldingsByPortfolioIdAsync(portfolio.Id);
             return Ok(result.Select(x => new HoldingResponse
             {
-                InstrumentId = x.InstrumentId,
+                ISIN = x.ISIN,
+                Symbol = x.Symbol,
                 Qty = x.Qty,
                 AvgPrice = x.AvgPrice
             }));
+        }
+
+        [HttpGet("transactions/template")]
+        public IActionResult DownloadTemplate()
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("P    ortVault");
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("Transactions");
+
+            // Add Headers
+            var headers = new[] 
+            { 
+                "Symbol", "ISIN", "Trade Date", "Segment", "Series", 
+                "Trade Type", "Quantity", "Price", "Order Execution Time",
+                "Trade ID", "Order ID"
+            };
+
+            // Unlock all cells so users can enter data
+            worksheet.Cells.Style.Locked = false;
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cells[1, i + 1].Value = headers[i];
+                worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+                worksheet.Cells[1, i + 1].Style.Locked = true;
+            }
+
+            // AutoFit columns
+            worksheet.Cells.AutoFitColumns();
+
+            // Protect the worksheet
+            worksheet.Protection.IsProtected = true;
+
+            var content = package.GetAsByteArray();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PortVault_Transaction_Template.xlsx");
         }
 
         [HttpPost("{name}/transactions/upload")]
@@ -164,3 +201,4 @@ namespace PortVault.Api.Controllers
     }
 
 }
+

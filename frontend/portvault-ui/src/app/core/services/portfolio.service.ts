@@ -3,18 +3,18 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Holding } from '../../models/holding.model';
+import { Portfolio } from '../../models/portfolio.model';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {
   #http = inject(HttpClient);
-  #base = `${environment.apiUrl}/portfolio`;
+  #base = `${environment.apiUrl}/Portfolio`;
 
   getAll() {
     return firstValueFrom(this.#http.get<Portfolio[]>(this.#base));
   }
 
-  getHoldings(id: string) {
-    let v = firstValueFrom(this.#http.get<Holding[]>(`${this.#base}/${id}/holdings`));
-    return v;
+  getHoldings(portfolioName: string) {
+    return firstValueFrom(this.#http.get<Holding[]>(`${this.#base}/${portfolioName}/getholdings`));
   }
 }

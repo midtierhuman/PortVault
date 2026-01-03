@@ -24,7 +24,7 @@ namespace PortVault.Api.Data
                 .IsUnique();
 
             modelBuilder.Entity<Holding>()
-                .HasKey(h => new { h.PortfolioId, h.InstrumentId });
+                .HasKey(h => new { h.PortfolioId, h.ISIN });
 
             modelBuilder.Entity<Portfolio>()
                 .HasIndex(p => new { p.UserId, p.Name })

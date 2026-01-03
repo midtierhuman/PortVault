@@ -45,9 +45,33 @@ namespace PortVault.Api.Repositories
         }
         public async Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId)
         {
-            return await _db.Holdings
+            var holdings = await _db.Holdings
                 .Where(h => h.PortfolioId == portfolioId)
                 .ToArrayAsync();
+
+            if (holdings.Length == 0) return holdings;
+
+            var isins = holdings.Select(h => h.ISIN).Distinct().ToList();
+
+            var symbols = await _db.Transactions
+                .Where(t => t.PortfolioId == portfolioId && isins.Contains(t.ISIN))
+                .Select(t => new { ISIN = t.ISIN, t.Symbol })
+                .Distinct()
+                .ToListAsync();
+
+            var symbolDict = symbols
+                .GroupBy(x => x.ISIN)
+                .ToDictionary(g => g.Key, g => g.First().Symbol);
+
+            foreach (var h in holdings)
+            {
+                if (symbolDict.TryGetValue(h.ISIN, out var s))
+                {
+                    h.Symbol = s;
+                }
+            }
+
+            return holdings;
         }
         public async Task<int> AddTransactionsAsync(IEnumerable<Transaction> transactions)
         {
@@ -84,10 +108,10 @@ namespace PortVault.Api.Repositories
                 .ToListAsync();
 
             var grouped = txns
-                .GroupBy(x => x.InstrumentId)
+                .GroupBy(x => x.ISIN)
                 .Select(g => new {
-                    InstrumentId = g.Key,
-                    Units = g.Sum(t => t.TradeType == TradeType.Buy ? t.Qty : -t.Qty)
+                    ISIN = g.Key,
+                    Units = g.Sum(t => t.TradeType == TradeType.Buy ? t.Quantity : -t.Quantity)
                 })
                 .ToList();
 
@@ -95,14 +119,14 @@ namespace PortVault.Api.Repositories
 
             foreach (var g in grouped)
             {
-                if (g.Units <= 0) continue;
+                if (g.Units < 0.1m) continue;
 
                 var buys = txns
-                    .Where(x => x.InstrumentId == g.InstrumentId && x.TradeType == TradeType.Buy)
+                    .Where(x => x.ISIN == g.ISIN && x.TradeType == TradeType.Buy)
                     .ToList();
 
-                var totalBuyQty = buys.Sum(x => x.Qty);
-                var totalBuyAmount = buys.Sum(x => x.Qty * x.Price);
+                var totalBuyQty = buys.Sum(x => x.Quantity);
+                var totalBuyAmount = buys.Sum(x => x.Quantity * x.Price);
 
                 var avg = totalBuyQty == 0 ? 0 : totalBuyAmount / totalBuyQty;
 
@@ -111,7 +135,7 @@ namespace PortVault.Api.Repositories
                     Id = Guid.NewGuid(),
                     AvgPrice = avg,
                     PortfolioId = portfolioId,
-                    InstrumentId = g.InstrumentId,
+                    ISIN = g.ISIN,
                     Qty = g.Units
                 });
             }

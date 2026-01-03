@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PortVault.Api.Data;
 
@@ -11,9 +12,11 @@ using PortVault.Api.Data;
 namespace PortVault.Api.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20260103103231_AddTradeIdAndOrderIdToTransaction")]
+    partial class AddTradeIdAndOrderIdToTransaction
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,8 +162,9 @@ namespace PortVault.Api.Migrations
                     b.Property<DateTime?>("OrderExecutionTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("OrderID")
-                        .HasColumnType("bigint");
+                    b.Property<string>("OrderID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("PortfolioId")
                         .HasColumnType("uniqueidentifier");
@@ -186,8 +190,9 @@ namespace PortVault.Api.Migrations
                     b.Property<DateTime>("TradeDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("TradeID")
-                        .HasColumnType("bigint");
+                    b.Property<string>("TradeID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TradeType")
                         .HasColumnType("int");

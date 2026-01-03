@@ -1,0 +1,161 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.auth-card-wrapper {
+  width: 100%;
+  max-width: 450px;
+}
+
+.auth-card {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.header-content {
+  width: 100%;
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+
+  .logo-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #667eea;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: #333;
+  }
+
+  .subtitle {
+    color: #666;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+}
+
+mat-card-header {
+  display: block;
+  padding: 0;
+  margin: 0;
+}
+
+mat-card-content {
+  padding: 1rem 2rem 2rem;
+}
+
+.tab-content {
+  padding: 2rem 0 1rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-form-field {
+  margin-bottom: 1rem;
+
+  mat-icon[matPrefix] {
+    margin-right: 0.5rem;
+    color: #666;
+  }
+}
+
+.submit-button {
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+
+  mat-spinner {
+    display: inline-block;
+    margin: 0 auto;
+  }
+}
+
+.features {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+
+  .feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+
+    span {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+  }
+}
+
+::ng-deep {
+  .error-snackbar {
+    background-color: #f44336 !important;
+    color: white !important;
+  }
+
+  .mat-mdc-tab-labels {
+    justify-content: space-around;
+  }
+
+  .mat-mdc-tab {
+    flex-grow: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
+  mat-card-content {
+    padding: 1rem 1.5rem 1.5rem;
+  }
+
+  .header-content {
+    padding: 1.5rem 1rem 0.5rem;
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .features {
+    .feature-item {
+      span {
+        font-size: 0.75rem;
+      }
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+}

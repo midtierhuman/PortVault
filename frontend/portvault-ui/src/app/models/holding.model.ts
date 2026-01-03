@@ -1,10 +1,6 @@
-import { AssetType } from './asset-type.model';
-
 export interface Holding {
-  portfolioId: string;
-  instrumentId: string;
-  name: string;
-  type: AssetType;
+  isin: string;
+  symbol: string;
   qty: number;
   avgPrice: number;
 }

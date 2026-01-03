@@ -10,16 +10,40 @@ namespace PortVault.Api.Parsers
 
         public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId, string? password = null)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            
+            ExcelPackage.License.SetNonCommercialOrganization("PortVault");
+
             var transactions = new List<Transaction>();
+            var seenHashes = new HashSet<string>();
 
             using var package = new ExcelPackage(stream);
-            var worksheet = package.Workbook.Worksheets[0];
+
+            // Validate Sheet Name
+            var worksheet = package.Workbook.Worksheets["Transactions"];
+            if (worksheet == null)
+            {
+                throw new InvalidOperationException("The Excel file must contain a worksheet named 'Transactions'.");
+            }
+
+            // Validate Headers
+            var expectedHeaders = new[] 
+            { 
+                "Symbol", "ISIN", "Trade Date", "Segment", "Series", 
+                "Trade Type", "Quantity", "Price", "Order Execution Time",
+                "Trade ID", "Order ID"
+            };
+
+            for (int i = 0; i < expectedHeaders.Length; i++)
+            {
+                var header = GetCellValue(worksheet.Cells[1, i + 1]);
+                if (!string.Equals(header, expectedHeaders[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Invalid header in column {i + 1}. Expected '{expectedHeaders[i]}', found '{header}'.");
+                }
+            }
             
             int rowCount = worksheet.Dimension?.Rows ?? 0;
             
-            // Start from row 2 (row 1 contains headers: Symbol, ISIN, Trade Date, Segment, Series, Trade Type, Quantity, Price, Order Execution Time)
+            // Start from row 2
             for (int row = 2; row <= rowCount; row++)
             {
                 try
@@ -33,6 +57,8 @@ namespace PortVault.Api.Parsers
                     var quantityValue = GetCellValue(worksheet.Cells[row, 7]);
                     var priceValue = GetCellValue(worksheet.Cells[row, 8]);
                     var executionTimeValue = GetCellValue(worksheet.Cells[row, 9]);
+                    var tradeIdValue = GetCellValue(worksheet.Cells[row, 10]);
+                    var orderIdValue = GetCellValue(worksheet.Cells[row, 11]);
 
                     // Skip empty rows
                     if (string.IsNullOrWhiteSpace(isin) || string.IsNullOrWhiteSpace(tradeDateValue))
@@ -61,14 +87,23 @@ namespace PortVault.Api.Parsers
                     if (!decimal.TryParse(priceValue.Replace(",", ""), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
                         continue;
 
+                    long.TryParse(tradeIdValue, out var tradeId);
+                    long.TryParse(orderIdValue, out var orderId);
+
                     var transactionHash = Transaction.GenerateTransactionHash(
                         isin, 
                         tradeDate.Value, 
                         executionTime, 
                         price, 
                         tradeType, 
-                        quantity
+                        quantity,
+                        tradeId,
+                        orderId
                     );
+
+                    // Check for duplicates within the file
+                    if (!seenHashes.Add(transactionHash))
+                        continue;
 
                     var transaction = new Transaction
                     {
@@ -83,7 +118,9 @@ namespace PortVault.Api.Parsers
                         Series = series,
                         TradeType = tradeType,
                         Quantity = quantity,
-                        Price = price
+                        Price = price,
+                        TradeID = tradeId,
+                        OrderID = orderId
                     };
 
                     transactions.Add(transaction);
@@ -147,3 +184,4 @@ namespace PortVault.Api.Parsers
         }
     }
 }
+

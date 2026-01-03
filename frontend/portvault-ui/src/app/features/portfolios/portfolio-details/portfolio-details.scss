@@ -18,6 +18,13 @@
     font-weight: 500;
   }
 
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem;
+  }
+
   td,
   th {
     padding: 8px 4px;

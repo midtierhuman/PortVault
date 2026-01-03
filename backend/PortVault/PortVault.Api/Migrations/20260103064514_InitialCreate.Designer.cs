@@ -12,8 +12,8 @@ using PortVault.Api.Data;
 namespace PortVault.Api.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20251108070534_Initial")]
-    partial class Initial
+    [Migration("20260103064514_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,47 @@ namespace PortVault.Api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("PortVault.Api.Models.AppUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasAnnotation("Relational:JsonPropertyName", "id");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasAnnotation("Relational:JsonPropertyName", "email");
+
+                    b.Property<byte[]>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte[]>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasAnnotation("Relational:JsonPropertyName", "username");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
 
             modelBuilder.Entity("PortVault.Api.Models.Asset", b =>
                 {
@@ -64,6 +105,9 @@ namespace PortVault.Api.Migrations
 
                     b.Property<decimal>("AvgPrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Qty")
                         .HasColumnType("decimal(18,2)");
@@ -108,12 +152,12 @@ namespace PortVault.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("InstrumentId")
+                    b.Property<string>("ISIN")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("OrderExecutionTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("PortfolioId")
                         .HasColumnType("uniqueidentifier");
@@ -121,14 +165,30 @@ namespace PortVault.Api.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("Qty")
+                    b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("TradeId")
-                        .HasColumnType("int");
+                    b.Property<string>("Segment")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Series")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TradeDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("TradeType")
                         .HasColumnType("int");
+
+                    b.Property<string>("TransactionHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

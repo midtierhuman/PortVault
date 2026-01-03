@@ -7,6 +7,7 @@ namespace PortVault.Api.Data
     {
         public AppDb(DbContextOptions<AppDb> options) : base(options) { }
 
+        public DbSet<AppUser> Users => Set<AppUser>();
         public DbSet<Portfolio> Portfolios => Set<Portfolio>();
         public DbSet<Asset> Assets => Set<Asset>();
         public DbSet<Transaction> Transactions => Set<Transaction>();
@@ -14,6 +15,14 @@ namespace PortVault.Api.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<AppUser>()
+                .HasIndex(x => x.Username)
+                .IsUnique();
+
+            modelBuilder.Entity<AppUser>()
+                .HasIndex(x => x.Email)
+                .IsUnique();
+
             modelBuilder.Entity<Holding>()
                 .HasKey(h => new { h.PortfolioId, h.InstrumentId });
         }

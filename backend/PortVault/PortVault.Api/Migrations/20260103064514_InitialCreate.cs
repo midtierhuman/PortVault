@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PortVault.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -34,6 +34,7 @@ namespace PortVault.Api.Migrations
                 {
                     PortfolioId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     InstrumentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Qty = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     AvgPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
@@ -62,18 +63,50 @@ namespace PortVault.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TradeId = table.Column<int>(type: "int", nullable: false),
+                    TransactionHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PortfolioId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    InstrumentId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Symbol = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ISIN = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TradeDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    OrderExecutionTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Segment = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Series = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TradeType = table.Column<int>(type: "int", nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Qty = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Transactions", x => x.Id);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "Users",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    PasswordHash = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    PasswordSalt = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    CreatedUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Username",
+                table: "Users",
+                column: "Username",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -90,6 +123,9 @@ namespace PortVault.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "Transactions");
+
+            migrationBuilder.DropTable(
+                name: "Users");
         }
     }
 }

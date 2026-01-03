@@ -21,18 +21,19 @@ namespace PortVault.Api.Repositories
             return await _db.Portfolios.FirstOrDefaultAsync(x => x.Id == portfolioId);
         }
 
-        public async Task<Portfolio> CreateAsync(Portfolio p)
+        public async Task<Portfolio> CreateAsync(string name, Guid userId)
         {
-            var entity = new Portfolio
+            var portfolio = new Portfolio
             {
                 Id = Guid.NewGuid(),
-                Name = p.Name,
-                Invested = p.Invested,
-                Current = p.Current
+                UserId = userId,
+                Name = name.Trim(),
+                Invested = 0,
+                Current = 0
             };
-            _db.Portfolios.Add(p);
+            _db.Portfolios.Add(portfolio);
             await _db.SaveChangesAsync();
-            return p;
+            return portfolio;
         }
         public async Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId)
         {
@@ -44,15 +45,17 @@ namespace PortVault.Api.Repositories
         {
             try
             {
-                var tradeIds = transactions.Select(x => x.TradeId).ToList();
+                var transactionHashes = transactions.Select(x => x.TransactionHash).ToList();
 
                 var existing = await _db.Transactions
-                    .Where(x => tradeIds.Contains(x.TradeId))
-                    .Select(x => x.TradeId)
+                    .Where(x => transactionHashes.Contains(x.TransactionHash))
+                    .Select(x => x.TransactionHash)
                     .ToListAsync();
 
+                var existingSet = existing.ToHashSet();
+
                 var newOnes = transactions
-                    .Where(x => !existing.Contains(x.TradeId))
+                    .Where(x => !existingSet.Contains(x.TransactionHash))
                     .ToList();
 
                 if (newOnes.Count == 0) return 0;
@@ -61,7 +64,8 @@ namespace PortVault.Api.Repositories
                 return await _db.SaveChangesAsync();
             }
             catch (Exception e)
-            { var msg = e.Message;
+            { 
+                var msg = e.Message;
                 return 0;
             }
         }

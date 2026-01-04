@@ -85,18 +85,54 @@ namespace PortVault.Api.Repositories
                 .ToArrayAsync();
         }
 
+        public async Task DeleteTransactionsByPortfolioIdAsync(Guid portfolioId)
+        {
+            var transactions = _db.Transactions.Where(t => t.PortfolioId == portfolioId);
+            _db.Transactions.RemoveRange(transactions);
+            
+            var holdings = _db.Holdings.Where(h => h.PortfolioId == portfolioId);
+            _db.Holdings.RemoveRange(holdings);
+
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<(int AddedCount, int DuplicatesSkipped, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId)
         {
             var addedCount = 0;
             var duplicatesSkipped = 0;
             var errors = new List<string>();
+            var processedIds = new HashSet<Guid>();
             
             foreach (var txn in transactions)
             {
+                // Skip if we've already processed this ID in the current batch
+                if (processedIds.Contains(txn.Id))
+                {
+                    duplicatesSkipped++;
+                    continue;
+                }
+
                 try
                 {
+                    // Check if transaction already exists in DB
+                    // FindAsync checks local cache first, then DB
+                    var existing = await _db.Transactions.FindAsync(txn.Id);
+                    if (existing != null)
+                    {
+                        duplicatesSkipped++;
+                        // Detach the existing entity to keep context clean
+                        _db.Entry(existing).State = EntityState.Detached;
+                        processedIds.Add(txn.Id);
+                        continue;
+                    }
+
                     _db.Transactions.Add(txn);
                     await _db.SaveChangesAsync();
+                    
+                    // Mark as processed and detach to keep context clean
+                    processedIds.Add(txn.Id);
+                    _db.Entry(txn).State = EntityState.Detached;
+                    
                     addedCount++;
                 }
                 catch (DbUpdateException ex) 
@@ -104,12 +140,17 @@ namespace PortVault.Api.Repositories
                           (sqlEx.Number == 2601 || sqlEx.Number == 2627)) // Unique constraint violation
                 {
                     duplicatesSkipped++;
+                    processedIds.Add(txn.Id);
+                    // Detach the failed entity
+                    try { _db.Entry(txn).State = EntityState.Detached; } catch {}
+                    
                     // Log which transaction was skipped for debugging
                     Console.WriteLine($"Duplicate transaction skipped: {txn.Symbol} ({txn.ISIN}) on {txn.TradeDate:yyyy-MM-dd} - Qty: {txn.Quantity} @ {txn.Price}");
                 }
                 catch (Exception ex)
                 {
                     errors.Add($"{txn.Symbol} on {txn.TradeDate:yyyy-MM-dd}: {ex.Message}");
+                    try { _db.Entry(txn).State = EntityState.Detached; } catch {}
                 }
             }
             

@@ -1,6 +1,8 @@
 using OfficeOpenXml;
 using PortVault.Api.Models;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace PortVault.Api.Parsers
 {
@@ -96,9 +98,17 @@ namespace PortVault.Api.Parsers
                     if (!string.IsNullOrEmpty(orderIdValue) && long.TryParse(orderIdValue, out var oid))
                         orderId = oid;
 
+                    // Use execution time if available, otherwise default to trade date at midnight
+                    var effectiveTime = executionTime ?? tradeDate.Value.Date;
+
+                    // Generate deterministic ID based on trade data
+                    // We use a pipe separator to ensure structure is preserved even when optional fields are null
+                    var rawIdData = $"{portfolioId}|{isin}|{tradeDate.Value:yyyyMMdd}|{tradeType}|{quantity}|{price}|{tradeId}|{orderId}|{effectiveTime:yyyyMMddHHmmss}";
+                    var id = GenerateDeterministicGuid(rawIdData);
+
                     var transaction = new Transaction
                     {
-                        Id = Guid.NewGuid(),
+                        Id = id,
                         PortfolioId = portfolioId,
                         Symbol = symbol,
                         ISIN = isin,
@@ -122,6 +132,15 @@ namespace PortVault.Api.Parsers
             }
 
             return transactions;
+        }
+
+        private static Guid GenerateDeterministicGuid(string input)
+        {
+            using var sha256 = SHA256.Create();
+            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+            var guidBytes = new byte[16];
+            Array.Copy(hash, guidBytes, 16);
+            return new Guid(guidBytes);
         }
 
         private static string GetCellValue(OfficeOpenXml.ExcelRange cell)

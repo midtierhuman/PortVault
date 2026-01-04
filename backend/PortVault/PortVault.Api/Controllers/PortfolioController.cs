@@ -248,9 +248,9 @@ namespace PortVault.Api.Controllers
             if (portfolio is null) return NotFound();
 
             // This is a destructive operation - use with caution
-            var transactions = await _repo.GetTransactionsByPortfolioIdAsync(portfolio.Id);
-            // Delete via repository would be better, but for now:
-            return Ok(new { message = "Use SQL: DELETE FROM Holdings; DELETE FROM Transactions;" });
+            await _repo.DeleteTransactionsByPortfolioIdAsync(portfolio.Id);
+            
+            return Ok(new { message = "All transactions and holdings cleared for this portfolio." });
         }
 
     }

@@ -18,10 +18,10 @@ namespace PortVault.Api.Models
         public string Name { get; init; } = string.Empty;
 
         [JsonPropertyName("invested")]
-        public decimal Invested { get; init; }
+        public decimal Invested { get; set; }
 
         [JsonPropertyName("current")]
-        public decimal Current { get; init; }
+        public decimal Current { get; set; }
 
     }
     

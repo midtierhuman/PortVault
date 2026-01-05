@@ -254,6 +254,9 @@ namespace PortVault.Api.Repositories
             var holdings = _db.Holdings.Where(h => h.PortfolioId == portfolioId);
             _db.Holdings.RemoveRange(holdings);
 
+            var fileUploads = _db.FileUploads.Where(f => f.PortfolioId == portfolioId);
+            _db.FileUploads.RemoveRange(fileUploads);
+
             await _db.SaveChangesAsync();
         }
 
@@ -364,6 +367,15 @@ namespace PortVault.Api.Repositories
                     ISIN = g.ISIN,
                     Qty = g.Units
                 });
+            }
+
+            // Update Portfolio Totals
+            var totalInvested = holdings.Sum(h => h.Qty * h.AvgPrice);
+            var portfolio = await _db.Portfolios.FirstOrDefaultAsync(p => p.Id == portfolioId);
+            if (portfolio != null)
+            {
+                portfolio.Invested = totalInvested;
+                portfolio.Current = totalInvested; // Default to invested value until market data is available
             }
 
             // nuke old holdings

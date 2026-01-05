@@ -283,6 +283,9 @@ namespace PortVault.Api.Controllers
                         UploadedAt = DateTime.UtcNow,
                         TransactionCount = result.AddedCount
                     });
+
+                    // Auto-recalculate holdings and update portfolio stats
+                    await _repo.RecalculateHolding(portfolio.Id);
                 }
 
                 return Ok(new { 

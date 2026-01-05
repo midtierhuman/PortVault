@@ -1,10 +1,20 @@
-import { tradeType } from './trade-type.model';
+// Restrict trade types to API-aligned values.
+export enum TradeType {
+  Buy = 'Buy',
+  Sell = 'Sell',
+}
 
 export interface Transaction {
   id: string;
-  instrumentId: string;
-  type: tradeType;
-  date: Date;
+  symbol: string;
+  isin: string;
+  tradeDate: string;
+  orderExecutionTime: string;
+  segment: string;
+  series: string;
+  tradeType: TradeType;
+  quantity: number;
   price: number;
-  qty: number;
+  tradeID: number;
+  orderID: number;
 }

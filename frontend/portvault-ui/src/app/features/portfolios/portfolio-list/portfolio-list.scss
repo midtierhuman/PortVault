@@ -5,6 +5,7 @@
 mat-card {
   padding: 16px;
 }
+
 table {
   width: 100%;
 }
@@ -21,4 +22,46 @@ table {
   padding: 2rem;
   color: #666;
   font-size: 1rem;
+}
+
+.portfolio-details {
+  .details-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  .details-table {
+    margin-top: 16px;
+    width: 100%;
+
+    .positive {
+      color: #4caf50;
+      font-weight: 500;
+    }
+
+    .negative {
+      color: #f44336;
+      font-weight: 500;
+    }
+
+    .buy {
+      color: #4caf50;
+      font-weight: 500;
+    }
+
+    .sell {
+      color: #f44336;
+      font-weight: 500;
+    }
+  }
+
+  ::ng-deep .mat-mdc-tab-body-content {
+    overflow-x: auto;
+  }
 }

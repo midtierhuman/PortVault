@@ -110,7 +110,13 @@ namespace PortVault.Api.Controllers
         }
 
         [HttpGet("{name}/transactions")]
-        public async Task<IActionResult> GetTransactions(string name)
+        public async Task<IActionResult> GetTransactions(
+            string name, 
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 20,
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to = null,
+            [FromQuery] string? search = null)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
@@ -119,22 +125,62 @@ namespace PortVault.Api.Controllers
             var portfolio = await _repo.GetByNameAsync(name, userId);
             if (portfolio is null) return NotFound();
 
-            var result = await _repo.GetTransactionsByPortfolioIdAsync(portfolio.Id);
-            return Ok(result.Select(x => new TransactionResponse
+            var (items, totalCount) = await _repo.GetTransactionsAsync(portfolio.Id, page, pageSize, from, to, search);
+            
+            return Ok(new 
             {
-                Id = x.Id,
-                Symbol = x.Symbol,
-                ISIN = x.ISIN,
-                TradeDate = x.TradeDate,
-                OrderExecutionTime = x.OrderExecutionTime,
-                Segment = x.Segment,
-                Series = x.Series,
-                TradeType = x.TradeType.ToString(),
-                Quantity = x.Quantity,
-                Price = x.Price,
-                TradeID = x.TradeID ?? 0,
-                OrderID = x.OrderID ?? 0
-            }));
+                Data = items.Select(x => new TransactionResponse
+                {
+                    Id = x.Id,
+                    Symbol = x.Symbol,
+                    ISIN = x.ISIN,
+                    TradeDate = x.TradeDate,
+                    OrderExecutionTime = x.OrderExecutionTime,
+                    Segment = x.Segment,
+                    Series = x.Series,
+                    TradeType = x.TradeType.ToString(),
+                    Quantity = x.Quantity,
+                    Price = x.Price,
+                    TradeID = x.TradeID ?? 0,
+                    OrderID = x.OrderID ?? 0
+                }),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            });
+        }
+
+        [HttpGet("{name}/analytics")]
+        public async Task<IActionResult> GetAnalytics(
+            string name, 
+            [FromQuery] string duration = "ALL", 
+            [FromQuery] string frequency = "Daily")
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            DateTime? from = null;
+            var now = DateTime.UtcNow.Date;
+
+            switch (duration.ToUpperInvariant())
+            {
+                case "1M": from = now.AddMonths(-1); break;
+                case "3M": from = now.AddMonths(-3); break;
+                case "6M": from = now.AddMonths(-6); break;
+                case "YTD": from = new DateTime(now.Year, 1, 1); break;
+                case "1Y": from = now.AddYears(-1); break;
+                case "3Y": from = now.AddYears(-3); break;
+                case "5Y": from = now.AddYears(-5); break;
+                case "ALL": default: from = null; break;
+            }
+
+            var analytics = await _repo.GetPortfolioAnalyticsAsync(portfolio.Id, from, frequency);
+            return Ok(analytics);
         }
 
         [HttpGet("transactions/template")]

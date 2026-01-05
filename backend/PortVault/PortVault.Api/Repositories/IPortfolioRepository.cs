@@ -9,7 +9,8 @@ namespace PortVault.Api.Repositories
         Task<Portfolio?> GetByNameAsync(string name, Guid userId);
         Task<Portfolio> CreateAsync(string name, Guid userId);
         Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId);
-        Task<Transaction[]> GetTransactionsByPortfolioIdAsync(Guid portfolioId);
+        Task<(Transaction[] Items, int TotalCount)> GetTransactionsAsync(Guid portfolioId, int page, int pageSize, DateTime? from, DateTime? to, string? search);
+        Task<AnalyticsResponse> GetPortfolioAnalyticsAsync(Guid portfolioId, DateTime? from, string frequency);
         Task DeleteTransactionsByPortfolioIdAsync(Guid portfolioId);
         Task DeleteTransactionAsync(Guid transactionId, Guid portfolioId);
         Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId);

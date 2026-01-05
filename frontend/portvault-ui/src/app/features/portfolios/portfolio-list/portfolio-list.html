@@ -1,6 +1,9 @@
 <section class="pv-portfolios">
   @if (!selectedPortfolio()) {
-  <h2>My Portfolios</h2>
+  <div class="page-header">
+    <h2>My Portfolios</h2>
+    <p class="subtitle">Track and manage your investment portfolios</p>
+  </div>
 
   @if (isLoading()) {
   <div class="loading-container">
@@ -128,129 +131,265 @@
 
         <!-- Transactions Tab -->
         <mat-tab label="Transactions">
-          <div class="chart-section" *ngIf="transactions().length > 0">
-            <div class="chart-controls">
-              <span>View by:</span>
+          <div class="tab-content">
+            <div class="chart-container">
+              <div class="chart-header">
+                <h3 class="section-title">Investment Journey</h3>
+                <div class="chart-controls">
+                  <mat-form-field appearance="outline" class="duration-field">
+                    <mat-label>Duration</mat-label>
+                    <mat-select
+                      [value]="duration()"
+                      (selectionChange)="changeDuration($event.value)"
+                    >
+                      <mat-option value="1M">Last 1 Month</mat-option>
+                      <mat-option value="3M">Last 3 Months</mat-option>
+                      <mat-option value="6M">Last 6 Months</mat-option>
+                      <mat-option value="YTD">Year to Date</mat-option>
+                      <mat-option value="1Y">Last 1 Year</mat-option>
+                      <mat-option value="3Y">Last 3 Years</mat-option>
+                      <mat-option value="5Y">Last 5 Years</mat-option>
+                      <mat-option value="ALL">All Time</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <div class="frequency-selector">
+                    <button
+                      mat-stroked-button
+                      [color]="frequency() === 'Daily' ? 'primary' : undefined"
+                      (click)="changeFrequency('Daily')"
+                      class="frequency-btn"
+                    >
+                      Daily
+                    </button>
+                    <button
+                      mat-stroked-button
+                      [color]="frequency() === 'Weekly' ? 'primary' : undefined"
+                      (click)="changeFrequency('Weekly')"
+                      class="frequency-btn"
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      mat-stroked-button
+                      [color]="frequency() === 'Monthly' ? 'primary' : undefined"
+                      (click)="changeFrequency('Monthly')"
+                      class="frequency-btn"
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-wrapper">
+                @if (isLoadingChart()) {
+                <div class="loading-container">
+                  <mat-spinner></mat-spinner>
+                </div>
+                } @else if (chartSeries().length > 0) {
+                <apx-chart
+                  [series]="chartSeries()"
+                  [chart]="chartOptions().chart"
+                  [xaxis]="chartOptions().xaxis"
+                  [yaxis]="chartOptions().yaxis"
+                  [stroke]="chartOptions().stroke"
+                  [dataLabels]="chartOptions().dataLabels"
+                  [tooltip]="chartOptions().tooltip"
+                  [plotOptions]="chartOptions().plotOptions"
+                ></apx-chart>
+                } @else {
+                <div class="chart-empty">
+                  <mat-icon>show_chart</mat-icon>
+                  <p class="empty-message">No data available for the selected period</p>
+                </div>
+                }
+              </div>
+            </div>
+
+            <div class="details-toggle">
               <button
-                mat-button
-                [color]="granularity() === 'daily' ? 'primary' : undefined"
-                (click)="setGranularity('daily')"
+                mat-stroked-button
+                color="primary"
+                (click)="toggleDetails()"
+                class="toggle-btn"
               >
-                Daily
-              </button>
-              <button
-                mat-button
-                [color]="granularity() === 'monthly' ? 'primary' : undefined"
-                (click)="setGranularity('monthly')"
-              >
-                Monthly
-              </button>
-              <button
-                mat-button
-                [color]="granularity() === 'yearly' ? 'primary' : undefined"
-                (click)="setGranularity('yearly')"
-              >
-                Yearly
+                <mat-icon>{{ showDetails() ? 'expand_less' : 'expand_more' }}</mat-icon>
+                {{ showDetails() ? 'Hide Transaction Details' : 'Show Transaction Details' }}
               </button>
             </div>
 
-            @if (chartSeries().length > 0) {
-            <apx-chart
-              [series]="chartSeries()"
-              [chart]="chartOptions().chart"
-              [xaxis]="chartOptions().xaxis"
-              [yaxis]="chartOptions().yaxis"
-              [stroke]="chartOptions().stroke"
-              [dataLabels]="chartOptions().dataLabels"
-              [tooltip]="chartOptions().tooltip"
-              [plotOptions]="chartOptions().plotOptions"
-            ></apx-chart>
+            @if (showDetails()) {
+            <div class="transactions-section">
+              <div class="section-header">
+                <h3 class="section-title">Transaction History</h3>
+                <div class="tx-filters">
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>Search</mat-label>
+                    <input
+                      matInput
+                      placeholder="Symbol or ISIN"
+                      [value]="listFilterSearch()"
+                      (input)="listFilterSearch.set($any($event.target).value)"
+                    />
+                    <mat-icon matPrefix>search</mat-icon>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>From Date</mat-label>
+                    <input
+                      matInput
+                      [matDatepicker]="fromPicker"
+                      [value]="listFilterFrom() ?? ''"
+                      (dateChange)="listFilterFrom.set($any($event.target).value || null)"
+                      readonly
+                    />
+                    <mat-datepicker-toggle matPrefix [for]="fromPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #fromPicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>To Date</mat-label>
+                    <input
+                      matInput
+                      [matDatepicker]="toPicker"
+                      [value]="listFilterTo() ?? ''"
+                      (dateChange)="listFilterTo.set($any($event.target).value || null)"
+                      readonly
+                    />
+                    <mat-datepicker-toggle matPrefix [for]="toPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #toPicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <div class="filter-actions">
+                    <button mat-raised-button color="primary" (click)="applyListFilters()">
+                      <mat-icon>filter_list</mat-icon>
+                      Apply Filters
+                    </button>
+                    <button mat-stroked-button (click)="resetListFilters()">
+                      <mat-icon>clear</mat-icon>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              @if (transactions().length > 0) {
+              <div class="table-meta">
+                <span
+                  >Showing page {{ page() }} of {{ totalPages() || 1 }} ({{
+                    totalCount()
+                  }}
+                  total)</span
+                >
+                <mat-form-field appearance="outline" class="page-size">
+                  <mat-label>Page size</mat-label>
+                  <mat-select [value]="pageSize()" (selectionChange)="changePageSize($event.value)">
+                    <mat-option [value]="10">10</mat-option>
+                    <mat-option [value]="20">20</mat-option>
+                    <mat-option [value]="50">50</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              @if (isLoadingTransactions()) {
+              <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+              }
+
+              <table mat-table [dataSource]="transactions()" class="details-table">
+                <ng-container matColumnDef="symbol">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('symbol')">Symbol</th>
+                  <td mat-cell *matCellDef="let t">{{ t.symbol }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="tradeType">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('tradeType')">Type</th>
+                  <td mat-cell *matCellDef="let t">
+                    <span [class.buy]="t.tradeType === 'Buy'" [class.sell]="t.tradeType === 'Sell'">
+                      {{ t.tradeType }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="quantity">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('quantity')">Quantity</th>
+                  <td mat-cell *matCellDef="let t">{{ t.quantity }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="price">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('price')">Price</th>
+                  <td mat-cell *matCellDef="let t">{{ t.price | currency : 'INR' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="tradeDate">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('tradeDate')">
+                    Trade Date
+                  </th>
+                  <td mat-cell *matCellDef="let t">{{ t.tradeDate | date : 'short' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="segment">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('segment')">Segment</th>
+                  <td mat-cell *matCellDef="let t">{{ t.segment }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="tradeID">
+                  <th mat-header-cell *matHeaderCellDef (click)="sortBy('tradeID')">Trade ID</th>
+                  <td mat-cell *matCellDef="let t">{{ t.tradeID }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="action">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let t">
+                    <button mat-icon-button color="primary" (click)="editTransaction(t)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr
+                  mat-header-row
+                  *matHeaderRowDef="[
+                    'symbol',
+                    'tradeType',
+                    'quantity',
+                    'price',
+                    'tradeDate',
+                    'segment',
+                    'tradeID',
+                    'action'
+                  ]"
+                ></tr>
+                <tr
+                  mat-row
+                  *matRowDef="
+                    let row;
+                    columns: [
+                      'symbol',
+                      'tradeType',
+                      'quantity',
+                      'price',
+                      'tradeDate',
+                      'segment',
+                      'tradeID',
+                      'action'
+                    ]
+                  "
+                ></tr>
+              </table>
+
+              <div class="pager">
+                <button mat-button (click)="changePage(-1)" [disabled]="page() <= 1">Prev</button>
+                <button mat-button (click)="changePage(1)" [disabled]="page() >= totalPages()">
+                  Next
+                </button>
+              </div>
+              } @else {
+              <p class="empty-message">No transactions found in this portfolio.</p>
+              }
+            </div>
             }
           </div>
-
-          @if (transactions().length > 0) {
-          <table mat-table [dataSource]="transactions()" class="details-table">
-            <ng-container matColumnDef="symbol">
-              <th mat-header-cell *matHeaderCellDef>Symbol</th>
-              <td mat-cell *matCellDef="let t">{{ t.symbol }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="tradeType">
-              <th mat-header-cell *matHeaderCellDef>Type</th>
-              <td mat-cell *matCellDef="let t">
-                <span [class.buy]="t.tradeType === 'Buy'" [class.sell]="t.tradeType === 'Sell'">
-                  {{ t.tradeType }}
-                </span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="quantity">
-              <th mat-header-cell *matHeaderCellDef>Quantity</th>
-              <td mat-cell *matCellDef="let t">{{ t.quantity }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="price">
-              <th mat-header-cell *matHeaderCellDef>Price</th>
-              <td mat-cell *matCellDef="let t">{{ t.price | currency : 'INR' }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="tradeDate">
-              <th mat-header-cell *matHeaderCellDef>Trade Date</th>
-              <td mat-cell *matCellDef="let t">{{ t.tradeDate | date : 'short' }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="segment">
-              <th mat-header-cell *matHeaderCellDef>Segment</th>
-              <td mat-cell *matCellDef="let t">{{ t.segment }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="tradeID">
-              <th mat-header-cell *matHeaderCellDef>Trade ID</th>
-              <td mat-cell *matCellDef="let t">{{ t.tradeID }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="action">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let t">
-                <button mat-icon-button color="primary" (click)="editTransaction(t)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr
-              mat-header-row
-              *matHeaderRowDef="[
-                'symbol',
-                'tradeType',
-                'quantity',
-                'price',
-                'tradeDate',
-                'segment',
-                'tradeID',
-                'action'
-              ]"
-            ></tr>
-            <tr
-              mat-row
-              *matRowDef="
-                let row;
-                columns: [
-                  'symbol',
-                  'tradeType',
-                  'quantity',
-                  'price',
-                  'tradeDate',
-                  'segment',
-                  'tradeID',
-                  'action'
-                ]
-              "
-            ></tr>
-          </table>
-          } @else {
-          <p class="empty-message">No transactions found in this portfolio.</p>
-          }
         </mat-tab>
       </mat-tab-group>
     </mat-card>

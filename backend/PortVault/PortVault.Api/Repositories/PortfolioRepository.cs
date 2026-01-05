@@ -76,13 +76,174 @@ namespace PortVault.Api.Repositories
             return holdings;
         }
 
-        public async Task<Transaction[]> GetTransactionsByPortfolioIdAsync(Guid portfolioId)
+        public async Task<(Transaction[] Items, int TotalCount)> GetTransactionsAsync(Guid portfolioId, int page, int pageSize, DateTime? from, DateTime? to, string? search)
         {
-            return await _db.Transactions
-                .Where(t => t.PortfolioId == portfolioId)
+            var query = _db.Transactions.Where(t => t.PortfolioId == portfolioId);
+
+            if (from.HasValue)
+                query = query.Where(t => t.TradeDate >= from.Value);
+
+            if (to.HasValue)
+                query = query.Where(t => t.TradeDate <= to.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(t => t.Symbol.Contains(s) || t.ISIN.Contains(s));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
                 .OrderByDescending(t => t.TradeDate)
                 .ThenByDescending(t => t.OrderExecutionTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToArrayAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<AnalyticsResponse> GetPortfolioAnalyticsAsync(Guid portfolioId, DateTime? from, string frequency)
+        {
+            // 1. Fetch all transactions to calculate running balance correctly
+            var transactions = await _db.Transactions
+                .Where(t => t.PortfolioId == portfolioId)
+                .OrderBy(t => t.TradeDate)
+                .Select(t => new { t.TradeDate, t.TradeType, t.Quantity, t.Price, t.Segment, t.ISIN })
+                .ToListAsync();
+
+            // 2. Calculate daily running balance (sparse)
+            var fullHistory = new SortedDictionary<DateTime, decimal>();
+            decimal currentInvested = 0;
+            
+            var dailyTxns = transactions
+                .GroupBy(t => t.TradeDate.Date)
+                .OrderBy(g => g.Key);
+
+            foreach (var day in dailyTxns)
+            {
+                foreach (var txn in day)
+                {
+                    var amount = txn.Quantity * txn.Price;
+                    if (txn.TradeType == TradeType.Buy)
+                        currentInvested += amount;
+                    else
+                        currentInvested -= amount;
+                }
+                fullHistory[day.Key] = currentInvested;
+            }
+
+            // 3. Resample based on Frequency and Filter by Duration
+            var historyPoints = new List<TimePoint>();
+            
+            if (fullHistory.Any())
+            {
+                var startDate = from ?? fullHistory.Keys.First();
+                var endDate = DateTime.UtcNow.Date;
+                
+                // Helper to get balance at specific date
+                // Since fullHistory is sparse (only dates with txns), we need the last value <= date
+                var historyKeys = fullHistory.Keys.ToList();
+                
+                decimal GetBalanceAt(DateTime d)
+                {
+                    var idx = historyKeys.BinarySearch(d);
+                    if (idx >= 0) return fullHistory[historyKeys[idx]];
+                    
+                    var nextIdx = ~idx;
+                    if (nextIdx == 0) return 0;
+                    return fullHistory[historyKeys[nextIdx - 1]];
+                }
+
+                // Generate points based on frequency
+                var freq = frequency?.ToLowerInvariant() ?? "daily";
+                
+                if (freq == "transaction")
+                {
+                    // Add start point
+                    historyPoints.Add(new TimePoint { Date = startDate, Invested = GetBalanceAt(startDate) });
+                    
+                    // Add all transaction points in range
+                    foreach (var kvp in fullHistory.Where(x => x.Key > startDate && x.Key <= endDate))
+                    {
+                        historyPoints.Add(new TimePoint { Date = kvp.Key, Invested = kvp.Value });
+                    }
+                    
+                    // Add end point
+                    if (historyPoints.Last().Date < endDate)
+                        historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
+                }
+                else
+                {
+                    // Periodic sampling
+                    var iterator = startDate;
+                    
+                    // Align iterator if needed (e.g. end of month)
+                    // For simplicity, we start at startDate and step forward.
+                    // A more advanced implementation might align to calendar weeks/months.
+                    
+                    while (iterator <= endDate)
+                    {
+                        historyPoints.Add(new TimePoint { Date = iterator, Invested = GetBalanceAt(iterator) });
+                        
+                        if (freq == "monthly")
+                            iterator = iterator.AddMonths(1);
+                        else if (freq == "weekly")
+                            iterator = iterator.AddDays(7);
+                        else // daily
+                            iterator = iterator.AddDays(1);
+                    }
+                    
+                    // Ensure the final "today" point is included if not covered
+                    if (historyPoints.Last().Date < endDate)
+                        historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
+                }
+            }
+
+            // 4. Sector Allocation (based on current holdings)
+            var holdings = await _db.Holdings
+                .Where(h => h.PortfolioId == portfolioId)
+                .ToListAsync();
+                
+            var segmentMap = transactions
+                .GroupBy(t => t.ISIN)
+                .ToDictionary(g => g.Key, g => g.Last().Segment);
+
+            var allocation = new List<AllocationPoint>();
+            decimal totalValue = 0;
+            var groupedHoldings = new Dictionary<string, decimal>();
+
+            foreach (var h in holdings)
+            {
+                var segment = segmentMap.ContainsKey(h.ISIN) && !string.IsNullOrWhiteSpace(segmentMap[h.ISIN]) 
+                    ? segmentMap[h.ISIN] 
+                    : "Other";
+                
+                var value = h.Qty * h.AvgPrice;
+                
+                if (!groupedHoldings.ContainsKey(segment))
+                    groupedHoldings[segment] = 0;
+                    
+                groupedHoldings[segment] += value;
+                totalValue += value;
+            }
+
+            foreach (var kvp in groupedHoldings)
+            {
+                allocation.Add(new AllocationPoint 
+                { 
+                    Segment = kvp.Key, 
+                    Value = kvp.Value,
+                    Percentage = totalValue == 0 ? 0 : Math.Round((kvp.Value / totalValue) * 100, 2)
+                });
+            }
+
+            return new AnalyticsResponse 
+            { 
+                History = historyPoints, 
+                SegmentAllocation = allocation 
+            };
         }
 
         public async Task DeleteTransactionsByPortfolioIdAsync(Guid portfolioId)

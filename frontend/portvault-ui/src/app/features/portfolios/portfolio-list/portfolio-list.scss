@@ -64,4 +64,24 @@ table {
   ::ng-deep .mat-mdc-tab-body-content {
     overflow-x: auto;
   }
+
+  .chart-section {
+    margin: 16px 0 8px;
+
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      span {
+        font-weight: 600;
+      }
+    }
+
+    apx-chart {
+      width: 100%;
+      display: block;
+    }
+  }
 }

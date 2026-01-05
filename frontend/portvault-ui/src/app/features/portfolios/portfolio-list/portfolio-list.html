@@ -128,6 +128,46 @@
 
         <!-- Transactions Tab -->
         <mat-tab label="Transactions">
+          <div class="chart-section" *ngIf="transactions().length > 0">
+            <div class="chart-controls">
+              <span>View by:</span>
+              <button
+                mat-button
+                [color]="granularity() === 'daily' ? 'primary' : undefined"
+                (click)="setGranularity('daily')"
+              >
+                Daily
+              </button>
+              <button
+                mat-button
+                [color]="granularity() === 'monthly' ? 'primary' : undefined"
+                (click)="setGranularity('monthly')"
+              >
+                Monthly
+              </button>
+              <button
+                mat-button
+                [color]="granularity() === 'yearly' ? 'primary' : undefined"
+                (click)="setGranularity('yearly')"
+              >
+                Yearly
+              </button>
+            </div>
+
+            @if (chartSeries().length > 0) {
+            <apx-chart
+              [series]="chartSeries()"
+              [chart]="chartOptions().chart"
+              [xaxis]="chartOptions().xaxis"
+              [yaxis]="chartOptions().yaxis"
+              [stroke]="chartOptions().stroke"
+              [dataLabels]="chartOptions().dataLabels"
+              [tooltip]="chartOptions().tooltip"
+              [plotOptions]="chartOptions().plotOptions"
+            ></apx-chart>
+            }
+          </div>
+
           @if (transactions().length > 0) {
           <table mat-table [dataSource]="transactions()" class="details-table">
             <ng-container matColumnDef="symbol">

@@ -11,7 +11,10 @@ namespace PortVault.Api.Repositories
         Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId);
         Task<Transaction[]> GetTransactionsByPortfolioIdAsync(Guid portfolioId);
         Task DeleteTransactionsByPortfolioIdAsync(Guid portfolioId);
-        Task<(int AddedCount, int DuplicatesSkipped, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId);
+        Task DeleteTransactionAsync(Guid transactionId, Guid portfolioId);
+        Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId);
         Task<bool> RecalculateHolding(Guid portfolioId);
+        Task<bool> IsFileUploadedAsync(Guid portfolioId, string fileHash);
+        Task RecordFileUploadAsync(FileUpload fileUpload);
     }
 }

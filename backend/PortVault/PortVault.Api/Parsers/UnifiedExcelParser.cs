@@ -1,8 +1,6 @@
 using OfficeOpenXml;
 using PortVault.Api.Models;
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace PortVault.Api.Parsers
 {
@@ -33,13 +31,22 @@ namespace PortVault.Api.Parsers
                 "Trade ID", "Order ID"
             };
 
-            for (int i = 0; i < expectedHeaders.Length; i++)
+            var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var colCount = worksheet.Dimension?.Columns ?? 0;
+
+            for (int col = 1; col <= colCount; col++)
             {
-                var header = GetCellValue(worksheet.Cells[1, i + 1]);
-                if (!string.Equals(header, expectedHeaders[i], StringComparison.OrdinalIgnoreCase))
+                var header = GetCellValue(worksheet.Cells[1, col]);
+                if (!string.IsNullOrWhiteSpace(header) && !columnMapping.ContainsKey(header))
                 {
-                    throw new InvalidOperationException($"Invalid header in column {i + 1}. Expected '{expectedHeaders[i]}', found '{header}'.");
+                    columnMapping[header] = col;
                 }
+            }
+
+            var missingHeaders = expectedHeaders.Where(h => !columnMapping.ContainsKey(h)).ToList();
+            if (missingHeaders.Any())
+            {
+                throw new InvalidOperationException($"Missing required headers: {string.Join(", ", missingHeaders)}");
             }
             
             int rowCount = worksheet.Dimension?.Rows ?? 0;
@@ -49,17 +56,17 @@ namespace PortVault.Api.Parsers
             {
                 try
                 {
-                    var symbol = GetCellValue(worksheet.Cells[row, 1]);
-                    var isin = GetCellValue(worksheet.Cells[row, 2]);
-                    var tradeDateValue = GetCellValue(worksheet.Cells[row, 3]);
-                    var segment = GetCellValue(worksheet.Cells[row, 4]);
-                    var series = GetCellValue(worksheet.Cells[row, 5]);
-                    var tradeTypeStr = GetCellValue(worksheet.Cells[row, 6]);
-                    var quantityValue = GetCellValue(worksheet.Cells[row, 7]);
-                    var priceValue = GetCellValue(worksheet.Cells[row, 8]);
-                    var executionTimeValue = GetCellValue(worksheet.Cells[row, 9]);
-                    var tradeIdValue = GetCellValue(worksheet.Cells[row, 10]);
-                    var orderIdValue = GetCellValue(worksheet.Cells[row, 11]);
+                    var symbol = GetCellValue(worksheet.Cells[row, columnMapping["Symbol"]]);
+                    var isin = GetCellValue(worksheet.Cells[row, columnMapping["ISIN"]]);
+                    var tradeDateValue = GetCellValue(worksheet.Cells[row, columnMapping["Trade Date"]]);
+                    var segment = GetCellValue(worksheet.Cells[row, columnMapping["Segment"]]);
+                    var series = GetCellValue(worksheet.Cells[row, columnMapping["Series"]]);
+                    var tradeTypeStr = GetCellValue(worksheet.Cells[row, columnMapping["Trade Type"]]);
+                    var quantityValue = GetCellValue(worksheet.Cells[row, columnMapping["Quantity"]]);
+                    var priceValue = GetCellValue(worksheet.Cells[row, columnMapping["Price"]]);
+                    var executionTimeValue = GetCellValue(worksheet.Cells[row, columnMapping["Order Execution Time"]]);
+                    var tradeIdValue = GetCellValue(worksheet.Cells[row, columnMapping["Trade ID"]]);
+                    var orderIdValue = GetCellValue(worksheet.Cells[row, columnMapping["Order ID"]]);
 
                     // Skip empty rows
                     if (string.IsNullOrWhiteSpace(isin) || string.IsNullOrWhiteSpace(tradeDateValue))
@@ -101,10 +108,8 @@ namespace PortVault.Api.Parsers
                     // Use execution time if available, otherwise default to trade date at midnight
                     var effectiveTime = executionTime ?? tradeDate.Value.Date;
 
-                    // Generate deterministic ID based on trade data
-                    // We use a pipe separator to ensure structure is preserved even when optional fields are null
-                    var rawIdData = $"{portfolioId}|{isin}|{tradeDate.Value:yyyyMMdd}|{tradeType}|{quantity}|{price}|{tradeId}|{orderId}|{effectiveTime:yyyyMMddHHmmss}";
-                    var id = GenerateDeterministicGuid(rawIdData);
+                    // Generate unique ID per transaction
+                    var id = Guid.NewGuid();
 
                     var transaction = new Transaction
                     {
@@ -132,15 +137,6 @@ namespace PortVault.Api.Parsers
             }
 
             return transactions;
-        }
-
-        private static Guid GenerateDeterministicGuid(string input)
-        {
-            using var sha256 = SHA256.Create();
-            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-            var guidBytes = new byte[16];
-            Array.Copy(hash, guidBytes, 16);
-            return new Guid(guidBytes);
         }
 
         private static string GetCellValue(OfficeOpenXml.ExcelRange cell)

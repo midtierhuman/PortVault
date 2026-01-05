@@ -96,67 +96,73 @@ namespace PortVault.Api.Repositories
             await _db.SaveChangesAsync();
         }
 
-        public async Task<(int AddedCount, int DuplicatesSkipped, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId)
+        public async Task DeleteTransactionAsync(Guid transactionId, Guid portfolioId)
         {
-            var addedCount = 0;
-            var duplicatesSkipped = 0;
-            var errors = new List<string>();
-            var processedIds = new HashSet<Guid>();
+            var transaction = await _db.Transactions
+                .FirstOrDefaultAsync(t => t.Id == transactionId && t.PortfolioId == portfolioId);
             
-            foreach (var txn in transactions)
+            if (transaction != null)
             {
-                // Skip if we've already processed this ID in the current batch
-                if (processedIds.Contains(txn.Id))
-                {
-                    duplicatesSkipped++;
-                    continue;
-                }
-
-                try
-                {
-                    // Check if transaction already exists in DB
-                    // FindAsync checks local cache first, then DB
-                    var existing = await _db.Transactions.FindAsync(txn.Id);
-                    if (existing != null)
-                    {
-                        duplicatesSkipped++;
-                        // Detach the existing entity to keep context clean
-                        _db.Entry(existing).State = EntityState.Detached;
-                        processedIds.Add(txn.Id);
-                        continue;
-                    }
-
-                    _db.Transactions.Add(txn);
-                    await _db.SaveChangesAsync();
-                    
-                    // Mark as processed and detach to keep context clean
-                    processedIds.Add(txn.Id);
-                    _db.Entry(txn).State = EntityState.Detached;
-                    
-                    addedCount++;
-                }
-                catch (DbUpdateException ex) 
-                    when (ex.InnerException is SqlException sqlEx && 
-                          (sqlEx.Number == 2601 || sqlEx.Number == 2627)) // Unique constraint violation
-                {
-                    duplicatesSkipped++;
-                    processedIds.Add(txn.Id);
-                    // Detach the failed entity
-                    try { _db.Entry(txn).State = EntityState.Detached; } catch {}
-                    
-                    // Log which transaction was skipped for debugging
-                    Console.WriteLine($"Duplicate transaction skipped: {txn.Symbol} ({txn.ISIN}) on {txn.TradeDate:yyyy-MM-dd} - Qty: {txn.Quantity} @ {txn.Price}");
-                }
-                catch (Exception ex)
-                {
-                    errors.Add($"{txn.Symbol} on {txn.TradeDate:yyyy-MM-dd}: {ex.Message}");
-                    try { _db.Entry(txn).State = EntityState.Detached; } catch {}
-                }
+                _db.Transactions.Remove(transaction);
+                await _db.SaveChangesAsync();
             }
-            
-            return (addedCount, duplicatesSkipped, errors);
+        }
+
+        public async Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId)
+        {
+            // Fast path: Bulk insert
+            try
+            {
+                await _db.Transactions.AddRangeAsync(transactions);
+                await _db.SaveChangesAsync();
+                
+                // Detach all to keep context clean
+                foreach (var txn in transactions)
+                {
+                    _db.Entry(txn).State = EntityState.Detached;
+                }
+
+                return (transactions.Count(), new List<string>());
+            }
+            catch (Exception)
+            {
+                // Fallback: Slow path (one-by-one) to identify specific errors
+                _db.ChangeTracker.Clear();
+                
+                var addedCount = 0;
+                var errors = new List<string>();
+                
+                foreach (var txn in transactions)
+                {
+                    try
+                    {
+                        _db.Transactions.Add(txn);
+                        await _db.SaveChangesAsync();
+                        _db.Entry(txn).State = EntityState.Detached;
+                        addedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"{txn.Symbol} on {txn.TradeDate:yyyy-MM-dd}: {ex.Message}");
+                        _db.ChangeTracker.Clear();
+                    }
+                }
+                
+                return (addedCount, errors);
+            }
         }
         
+        public async Task<bool> IsFileUploadedAsync(Guid portfolioId, string fileHash)
+        {
+            return await _db.FileUploads.AnyAsync(f => f.PortfolioId == portfolioId && f.FileHash == fileHash);
+        }
+
+        public async Task RecordFileUploadAsync(FileUpload fileUpload)
+        {
+            _db.FileUploads.Add(fileUpload);
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<bool> RecalculateHolding(Guid portfolioId)
         {
             var txns = await _db.Transactions
@@ -175,7 +181,10 @@ namespace PortVault.Api.Repositories
 
             foreach (var g in grouped)
             {
-                if (g.Units < 0.1m) continue;
+                // Skip if the position is effectively closed (within margin of error).
+                // We use a threshold of 0.1 to account for fractional unit mismatches.
+                // Anything outside this range (positive or negative) is considered significant.
+                if (Math.Abs(g.Units) <= 0.1m) continue;
 
                 var buys = txns
                     .Where(x => x.ISIN == g.ISIN && x.TradeType == TradeType.Buy)

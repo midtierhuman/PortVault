@@ -3,6 +3,7 @@ using PortVault.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using OfficeOpenXml;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace PortVault.Api.Controllers
 {
@@ -193,6 +194,21 @@ namespace PortVault.Api.Controllers
                 if (portfolio is null)
                     return NotFound($"Portfolio '{name}' not found.");
 
+                // Compute File Hash
+                string fileHash;
+                using (var sha256 = SHA256.Create())
+                {
+                    await using var hashStream = file.OpenReadStream();
+                    var hashBytes = await sha256.ComputeHashAsync(hashStream);
+                    fileHash = Convert.ToBase64String(hashBytes);
+                }
+
+                // Check for duplicate upload
+                if (await _repo.IsFileUploadedAsync(portfolio.Id, fileHash))
+                {
+                    return Conflict(new { message = "This file has already been uploaded to this portfolio." });
+                }
+
                 await using var stream = file.OpenReadStream();
                 var txns = _parser.Parse(stream, portfolio.Id, userId, null);
 
@@ -203,17 +219,30 @@ namespace PortVault.Api.Controllers
                     return BadRequest(new { 
                         message = "Some transactions failed to import",
                         addedCount = result.AddedCount,
-                        duplicatesSkipped = result.DuplicatesSkipped,
                         errors = result.Errors,
                         totalProcessed = txns.Count()
+                    });
+                }
+
+                // Record successful upload
+                if (result.AddedCount > 0)
+                {
+                    await _repo.RecordFileUploadAsync(new FileUpload
+                    {
+                        Id = Guid.NewGuid(),
+                        PortfolioId = portfolio.Id,
+                        UserId = userId,
+                        FileName = file.FileName,
+                        FileHash = fileHash,
+                        UploadedAt = DateTime.UtcNow,
+                        TransactionCount = result.AddedCount
                     });
                 }
 
                 return Ok(new { 
                     message = $"Successfully processed {result.AddedCount} new transactions.", 
                     totalProcessed = txns.Count(),
-                    newTransactions = result.AddedCount,
-                    duplicatesSkipped = result.DuplicatesSkipped
+                    newTransactions = result.AddedCount
                 });
             }
             catch (Exception ex)
@@ -236,10 +265,30 @@ namespace PortVault.Api.Controllers
             return Ok();
         }
 
-        // TEMPORARY ENDPOINT - Remove after cleaning data
-        [HttpDelete("{name}/transactions/clear")]
-        public async Task<IActionResult> ClearAllTransactions(string name)
+        [HttpDelete("{name}/transactions/{transactionId:guid}")]
+        public async Task<IActionResult> DeleteTransaction(string name, Guid transactionId)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            await _repo.DeleteTransactionAsync(transactionId, portfolio.Id);
+            
+            return Ok(new { message = "Transaction deleted." });
+        }
+
+        // It is better to have two separate endpoints for safety and clarity.
+        // We use a specific path '/all' for bulk deletion to prevent accidents where a missing ID in the single-delete route
+        // results in calling the collection delete route.
+        [HttpDelete("{name}/transactions/all")]
+        public async Task<IActionResult> ClearAllTransactions(string name, [FromQuery] bool confirm = false)
+        {
+            if (!confirm)
+                return BadRequest("Safety check: To delete all transactions, you must explicitly provide the query parameter '?confirm=true'.");
+
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();

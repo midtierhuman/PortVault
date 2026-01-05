@@ -4,31 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Holding } from '../../models/holding.model';
 import { Portfolio } from '../../models/portfolio.model';
-import { Transaction } from '../../models/transaction.model';
-
-export interface TransactionPage {
-  data: Transaction[];
-  page: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
-}
-
-export interface AnalyticsHistory {
-  date: string;
-  invested: number;
-}
-
-export interface SegmentAllocation {
-  segment: string;
-  value: number;
-  percentage: number;
-}
-
-export interface PortfolioAnalytics {
-  history: AnalyticsHistory[];
-  segmentAllocation: SegmentAllocation[];
-}
+import { Transaction, TransactionPage } from '../../models/transaction.model';
+import { PortfolioAnalytics } from '../../models/analytics.model';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {

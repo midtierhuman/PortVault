@@ -28,6 +28,7 @@ import { PortfolioService } from '../../../core/services/portfolio.service';
 import { Portfolio } from '../../../models/portfolio.model';
 import { Holding } from '../../../models/holding.model';
 import { Transaction, TradeType } from '../../../models/transaction.model';
+import { AnalyticsHistory, SegmentAllocation } from '../../../models/analytics.model';
 import { TransactionEditDialogComponent } from './transaction-edit-dialog/transaction-edit-dialog';
 
 @Component({
@@ -79,8 +80,8 @@ export class PortfolioListComponent {
   isLoadingChart = signal(false);
   duration = signal<'1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL'>('ALL');
   frequency = signal<'Daily' | 'Weekly' | 'Monthly'>('Daily');
-  analyticsHistory = signal<{ date: string; invested: number }[]>([]);
-  segmentAllocation = signal<{ segment: string; value: number; percentage: number }[]>([]);
+  analyticsHistory = signal<AnalyticsHistory[]>([]);
+  segmentAllocation = signal<SegmentAllocation[]>([]);
   chartSeries = signal<ApexAxisChartSeries>([]);
   chartOptions = signal<{
     chart: ApexChart;

@@ -1,29 +1,240 @@
 <section class="pv-dashboard">
-  <h2>Dashboard</h2>
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+  } @else {
+  <div class="page-header">
+    <h1>Investment Dashboard</h1>
+    <p class="subtitle">Overview of all your portfolios and investments</p>
+  </div>
 
-  <div class="pv-grid">
-    <mat-card>
-      <h3>Total Invested</h3>
-      <p>{{ totalInvested | currency : 'INR' }}</p>
+  <!-- KPI Summary Cards -->
+  <div class="kpi-section">
+    <mat-card class="kpi-card">
+      <div class="kpi-content">
+        <div class="kpi-icon">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <div class="kpi-text">
+          <p class="kpi-label">Total Invested</p>
+          <h2 class="kpi-value">{{ totalInvested() | currency : 'INR' : 'symbol' : '1.0-0' }}</h2>
+        </div>
+      </div>
     </mat-card>
 
-    <mat-card>
-      <h3>Current Value</h3>
-      <p>{{ currentValue | currency : 'INR' }}</p>
+    <mat-card class="kpi-card">
+      <div class="kpi-content">
+        <div class="kpi-icon">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+        <div class="kpi-text">
+          <p class="kpi-label">Current Value</p>
+          <h2 class="kpi-value">{{ totalCurrent() | currency : 'INR' : 'symbol' : '1.0-0' }}</h2>
+        </div>
+      </div>
     </mat-card>
 
-    <mat-card>
-      <h3>PnL</h3>
-      <p>{{ pnl | currency : 'INR' }}</p>
+    <mat-card class="kpi-card" [ngClass]="overallPnl() >= 0 ? 'positive' : 'negative'">
+      <div class="kpi-content">
+        <div class="kpi-icon">
+          <mat-icon>{{ overallPnl() >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+        </div>
+        <div class="kpi-text">
+          <p class="kpi-label">Overall P&L</p>
+          <h2 class="kpi-value">{{ overallPnl() | currency : 'INR' : 'symbol' : '1.0-0' }}</h2>
+        </div>
+      </div>
     </mat-card>
 
-    <mat-card class="full">
-      <h3>Holdings snapshot</h3>
-      <ul>
-        <li *ngFor="let item of holdings">
-          {{ item.symbol }} → {{ item.value | currency : 'INR' }}
-        </li>
-      </ul>
+    <mat-card class="kpi-card" [ngClass]="returnPercentage() >= 0 ? 'positive' : 'negative'">
+      <div class="kpi-content">
+        <div class="kpi-icon">
+          <mat-icon>percent</mat-icon>
+        </div>
+        <div class="kpi-text">
+          <p class="kpi-label">Return %</p>
+          <h2 class="kpi-value">{{ returnPercentage() | number : '1.2-2' }}%</h2>
+        </div>
+      </div>
     </mat-card>
   </div>
+
+  <!-- Investment Journey Chart -->
+  @if (chartSeries().length > 0) {
+  <mat-card class="chart-card">
+    <div class="chart-header">
+      <h2>Investment Journey</h2>
+      <p class="chart-subtitle">Overall invested amount over time</p>
+    </div>
+    <div class="chart-wrapper">
+      <apx-chart
+        [series]="chartSeries()"
+        [chart]="chartOptions().chart"
+        [xaxis]="chartOptions().xaxis"
+        [yaxis]="chartOptions().yaxis"
+        [stroke]="chartOptions().stroke"
+        [dataLabels]="chartOptions().dataLabels"
+        [tooltip]="chartOptions().tooltip"
+        [plotOptions]="chartOptions().plotOptions"
+      ></apx-chart>
+    </div>
+  </mat-card>
+  }
+
+  <!-- Portfolios Overview -->
+  <mat-card class="portfolios-card">
+    <div class="section-header">
+      <h2>Your Portfolios</h2>
+      <p class="section-subtitle">Quick overview of each portfolio</p>
+    </div>
+
+    @if (portfolios().length > 0) {
+    <div class="portfolios-grid">
+      @for (portfolio of portfolios(); track portfolio.name) {
+      <div class="portfolio-item">
+        <div class="portfolio-header">
+          <h3>{{ portfolio.name }}</h3>
+          <div class="portfolio-actions">
+            <button mat-icon-button (click)="viewPortfolio(portfolio.name)">
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="portfolio-stats">
+          <div class="stat">
+            <span class="label">Invested</span>
+            <span class="value">{{
+              portfolio.invested | currency : 'INR' : 'symbol' : '1.0-0'
+            }}</span>
+          </div>
+          <div class="stat">
+            <span class="label">Current</span>
+            <span class="value">{{
+              portfolio.current | currency : 'INR' : 'symbol' : '1.0-0'
+            }}</span>
+          </div>
+          <div
+            class="stat"
+            [ngClass]="portfolio.current - portfolio.invested >= 0 ? 'positive' : 'negative'"
+          >
+            <span class="label">P&L</span>
+            <span class="value">{{
+              portfolio.current - portfolio.invested | currency : 'INR' : 'symbol' : '1.0-0'
+            }}</span>
+          </div>
+        </div>
+
+        <div class="portfolio-progress">
+          <div class="progress-label">
+            <span>Performance</span>
+            <span
+              >{{
+                ((portfolio.current - portfolio.invested) / portfolio.invested) * 100
+                  | number : '1.2-2'
+              }}%</span
+            >
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [style.width.%]="
+                ((portfolio.current - portfolio.invested) / portfolio.invested) * 100 + 50
+              "
+            ></div>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <p class="empty-message">No portfolios found. Create your first portfolio to get started!</p>
+    }
+  </mat-card>
+
+  <!-- Top Performers Section -->
+  <div class="performers-section">
+    <mat-card class="performer-card">
+      <div class="performer-header">
+        <h3>🚀 Top Performers</h3>
+      </div>
+      @if (topPerformers().length > 0) {
+      <div class="performer-list">
+        @for (portfolio of topPerformers(); track portfolio.name) {
+        <div class="performer-item">
+          <div class="rank-badge">
+            <span>{{ topPerformers().indexOf(portfolio) + 1 }}</span>
+          </div>
+          <div class="performer-info">
+            <h4>{{ portfolio.name }}</h4>
+            <p class="performer-stat">
+              {{ portfolio.current - portfolio.invested | currency : 'INR' : 'symbol' : '1.0-0' }}
+              ({{
+                ((portfolio.current - portfolio.invested) / portfolio.invested) * 100
+                  | number : '1.2-2'
+              }}%)
+            </p>
+          </div>
+        </div>
+        }
+      </div>
+      } @else {
+      <p class="empty-message">No data available</p>
+      }
+    </mat-card>
+
+    <mat-card class="performer-card worst">
+      <div class="performer-header">
+        <h3>📉 Needs Attention</h3>
+      </div>
+      @if (worstPerformers().length > 0) {
+      <div class="performer-list">
+        @for (portfolio of worstPerformers(); track portfolio.name) {
+        <div class="performer-item">
+          <div class="rank-badge negative">
+            <span>{{ worstPerformers().indexOf(portfolio) + 1 }}</span>
+          </div>
+          <div class="performer-info">
+            <h4>{{ portfolio.name }}</h4>
+            <p class="performer-stat">
+              {{ portfolio.current - portfolio.invested | currency : 'INR' : 'symbol' : '1.0-0' }}
+              ({{
+                ((portfolio.current - portfolio.invested) / portfolio.invested) * 100
+                  | number : '1.2-2'
+              }}%)
+            </p>
+          </div>
+        </div>
+        }
+      </div>
+      } @else {
+      <p class="empty-message">All portfolios performing well!</p>
+      }
+    </mat-card>
+  </div>
+
+  <!-- Quick Stats -->
+  <mat-card class="stats-card">
+    <h3>Quick Statistics</h3>
+    <div class="quick-stats-grid">
+      <div class="stat-item">
+        <p class="stat-label">Total Portfolios</p>
+        <p class="stat-number">{{ portfolios().length }}</p>
+      </div>
+      <div class="stat-item">
+        <p class="stat-label">Portfolio with Gains</p>
+        <p class="stat-number">{{ gainingPortfolios() }}</p>
+      </div>
+      <div class="stat-item">
+        <p class="stat-label">Portfolio with Losses</p>
+        <p class="stat-number">{{ losingPortfolios() }}</p>
+      </div>
+      <div class="stat-item">
+        <p class="stat-label">Total Value at Risk</p>
+        <p class="stat-number">{{ totalValueAtRisk() | currency : 'INR' : 'symbol' : '1.0-0' }}</p>
+      </div>
+    </div>
+  </mat-card>
+  }
 </section>

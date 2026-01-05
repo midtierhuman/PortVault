@@ -18,3 +18,11 @@ export interface Transaction {
   tradeID: number;
   orderID: number;
 }
+
+export interface TransactionPage {
+  data: Transaction[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}

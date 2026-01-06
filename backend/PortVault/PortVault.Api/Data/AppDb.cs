@@ -13,6 +13,8 @@ namespace PortVault.Api.Data
         public DbSet<Transaction> Transactions => Set<Transaction>();
         public DbSet<Holding> Holdings => Set<Holding>();
         public DbSet<FileUpload> FileUploads => Set<FileUpload>();
+        public DbSet<Instrument> Instruments => Set<Instrument>();
+        public DbSet<InstrumentIdentifier> InstrumentIdentifiers => Set<InstrumentIdentifier>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,6 +35,16 @@ namespace PortVault.Api.Data
 
             modelBuilder.Entity<FileUpload>()
                 .HasIndex(f => new { f.PortfolioId, f.FileHash })
+                .IsUnique();
+
+            modelBuilder.Entity<Instrument>()
+                .HasIndex(i => i.Name);
+
+            modelBuilder.Entity<InstrumentIdentifier>()
+                .HasIndex(i => i.Value);
+            
+            modelBuilder.Entity<InstrumentIdentifier>()
+                .HasIndex(i => new { i.InstrumentId, i.Type, i.Value })
                 .IsUnique();
 
             // Removed complex unique constraints for Transactions as we now use deterministic IDs

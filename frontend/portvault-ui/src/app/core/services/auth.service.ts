@@ -2,7 +2,13 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { AuthResponse, LoginRequest, RegisterRequest, AuthUser } from '../../models/auth.model';
+import {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  AuthUser,
+  Role,
+} from '../../models/auth.model';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../../models/api-response.model';
 
@@ -23,6 +29,7 @@ export class AuthService {
 
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = this.isAuthenticatedSignal.asReadonly();
+  readonly isAdmin = computed(() => this.currentUser()?.role === Role.Admin);
 
   constructor() {
     // Check token expiry on service initialization
@@ -66,10 +73,26 @@ export class AuthService {
     localStorage.setItem(this.TOKEN_KEY, response.accessToken);
     localStorage.setItem(this.TOKEN_EXPIRY_KEY, response.expiresUtc);
 
+    // If role is missing in response, try to extract from token
+    let roleFromToken: Role | undefined;
+    try {
+      const payload = JSON.parse(atob(response.accessToken.split('.')[1]));
+      const roleClaim =
+        payload['role'] ||
+        payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role'];
+      if (roleClaim) {
+        roleFromToken = roleClaim as Role;
+      }
+    } catch (e) {
+      console.error('Failed to extract role from token during login', e);
+    }
+
     const user: AuthUser = {
       id: this.extractUserIdFromToken(response.accessToken),
       username: response.username,
       email: response.email,
+      role: response.role || roleFromToken || Role.User, // Fallback to token role or User
     };
 
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
@@ -80,7 +103,14 @@ export class AuthService {
 
   private getUserFromStorage(): AuthUser | null {
     const userJson = localStorage.getItem(this.USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
+    if (!userJson) return null;
+
+    try {
+      const user = JSON.parse(userJson);
+      return user;
+    } catch {
+      return null;
+    }
   }
 
   private checkAuthentication(): boolean {

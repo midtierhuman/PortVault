@@ -76,7 +76,8 @@ namespace PortVault.Api.Controllers.Auth
                 AccessToken = token,
                 ExpiresUtc = exp,
                 Username = user.Username,
-                Email = user.Email
+                Email = user.Email,
+                Role = user.Role
             };
             
             var response = ApiResponse<AuthResponse>.SuccessResponse(authResponse, "Login successful");

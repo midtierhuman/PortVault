@@ -15,10 +15,17 @@ export interface AuthResponse {
   expiresUtc: string;
   username: string;
   email: string;
+  role: Role;
 }
 
 export interface AuthUser {
   id: string;
   username: string;
   email: string;
+  role: Role;
+}
+export enum Role {
+  Admin = 'Admin',
+  User = 'User',
+  Guest = 'Guest',
 }

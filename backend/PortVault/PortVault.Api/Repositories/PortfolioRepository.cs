@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PortVault.Api.Data;
 using PortVault.Api.Models;
-using PortVault.Api.Utils;
+using PortVault.Api.Models.Entities;
+using PortVault.Api.Models.Dtos;
 using System.Text;
 using Microsoft.Data.SqlClient;
 

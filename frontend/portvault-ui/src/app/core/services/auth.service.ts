@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { AuthResponse, LoginRequest, RegisterRequest, AuthUser } from '../../models/auth.model';
 import { environment } from '../../../environments/environment';
+import { ApiResponse } from '../../models/api-response.model';
 
 @Injectable({
   providedIn: 'root',
@@ -28,9 +29,9 @@ export class AuthService {
     this.validateToken();
   }
 
-  register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/Auth/register`, request).pipe(
-      tap((response) => this.handleAuthResponse(response)),
+  register(request: RegisterRequest): Observable<ApiResponse<AuthResponse>> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/Auth/register`, request).pipe(
+      tap((response) => this.handleAuthResponse(response.data)),
       catchError((error) => {
         console.error('Registration failed:', error);
         throw error;
@@ -38,9 +39,9 @@ export class AuthService {
     );
   }
 
-  login(request: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/Auth/login`, request).pipe(
-      tap((response) => this.handleAuthResponse(response)),
+  login(request: LoginRequest): Observable<ApiResponse<AuthResponse>> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/Auth/login`, request).pipe(
+      tap((response) => this.handleAuthResponse(response.data)),
       catchError((error) => {
         console.error('Login failed:', error);
         throw error;

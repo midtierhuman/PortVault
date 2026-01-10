@@ -1,8 +1,7 @@
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Dtos
 {
     public sealed class HoldingResponse
     {
-
         public string ISIN { get; init; } = string.Empty;
         public string Symbol { get; init; } = string.Empty;
         public decimal Qty { get; init; }

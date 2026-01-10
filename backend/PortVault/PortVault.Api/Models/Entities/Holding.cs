@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using PortVault.Api.Models;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Entities
 {
     public class Holding
     {
-        public long Id { get; set; } // Changed from Guid
+        public long Id { get; set; }
         public Guid PortfolioId { get; set; }
         public long InstrumentId { get; set; }
         
@@ -19,6 +20,6 @@ namespace PortVault.Api.Models
         public string ISIN => Instrument?.Identifiers.FirstOrDefault(i => i.Type == IdentifierType.ISIN)?.Value ?? string.Empty;
 
         public decimal Qty { get; set; }
-        public decimal AvgPrice { get; set; } // optional but normally needed
+        public decimal AvgPrice { get; set; }
     }
 }

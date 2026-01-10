@@ -8,6 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs'; // Added import
 import {
   NgApexchartsModule,
   ApexAxisChartSeries,
@@ -87,7 +88,7 @@ export class DashboardComponent implements OnInit {
   private async loadDashboardData() {
     this.isLoading.set(true);
     try {
-      const portfolios = await this.portfolioService.getAll();
+      const portfolios = await firstValueFrom(this.portfolioService.getAll());
       this.portfolios.set(portfolios);
 
       // Calculate KPIs
@@ -131,10 +132,8 @@ export class DashboardComponent implements OnInit {
       // Load analytics for the first portfolio to get historical data pattern
       const portfolios = this.portfolios();
       if (portfolios.length > 0) {
-        const analytics = await this.portfolioService.getAnalytics(
-          portfolios[0].name,
-          'ALL',
-          'Monthly'
+        const analytics = await firstValueFrom(
+          this.portfolioService.getAnalytics(portfolios[0].name, 'ALL', 'Monthly')
         );
         this.overallAnalytics.set(analytics.history);
         this.buildChart();

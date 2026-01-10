@@ -1,8 +1,8 @@
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Dtos
 {
     public sealed class TransactionResponse
     {
-        public long Id { get; init; } // Changed from Guid
+        public long Id { get; init; }
         public string Symbol { get; init; } = string.Empty;
         public string ISIN { get; init; } = string.Empty;
         public DateTime TradeDate { get; init; }
@@ -12,7 +12,7 @@ namespace PortVault.Api.Models
         public string TradeType { get; init; } = string.Empty;
         public decimal Quantity { get; init; }
         public decimal Price { get; init; }
-        public string TradeID { get; init; } = string.Empty; // Changed from long
-        public string OrderID { get; init; } = string.Empty; // Changed from long
+        public string TradeID { get; init; } = string.Empty;
+        public string OrderID { get; init; } = string.Empty;
     }
 }

@@ -1,16 +1,8 @@
 using System.Text.Json.Serialization;
+using PortVault.Api.Models;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Entities
 {
-    public enum IdentifierType
-    {
-        ISIN,
-        TICKER,
-        NSE_SYMBOL,
-        BSE_CODE,
-        SCHEME_CODE
-    }
-
     public class InstrumentIdentifier
     {
         public long Id { get; set; }

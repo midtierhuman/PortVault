@@ -1,11 +1,12 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Holding } from '../../models/holding.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { Transaction, TransactionPage } from '../../models/transaction.model';
 import { PortfolioAnalytics } from '../../models/analytics.model';
+import { ApiResponse } from '../../models/api-response.model';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {
@@ -13,11 +14,15 @@ export class PortfolioService {
   #base = `${environment.apiUrl}/Portfolio`;
 
   getAll() {
-    return firstValueFrom(this.#http.get<Portfolio[]>(this.#base));
+    return this.#http
+      .get<ApiResponse<Portfolio[]>>(this.#base)
+      .pipe(map((res: ApiResponse<Portfolio[]>) => res.data || []));
   }
 
   getHoldings(portfolioName: string) {
-    return firstValueFrom(this.#http.get<Holding[]>(`${this.#base}/${portfolioName}/getholdings`));
+    return this.#http
+      .get<ApiResponse<Holding[]>>(`${this.#base}/${portfolioName}/getholdings`)
+      .pipe(map((res: ApiResponse<Holding[]>) => res.data || []));
   }
 
   getTransactions(
@@ -37,18 +42,22 @@ export class PortfolioService {
     if (opts.to) params = params.set('to', opts.to);
     if (opts.search) params = params.set('search', opts.search);
 
-    return firstValueFrom(
-      this.#http.get<TransactionPage>(`${this.#base}/${portfolioName}/transactions`, { params })
-    ).then(
-      (res: any) =>
-        ({
-          data: res.data ?? res.Data ?? [],
-          page: res.page ?? res.Page ?? 1,
-          pageSize: res.pageSize ?? res.PageSize ?? opts.pageSize ?? 20,
-          totalCount: res.totalCount ?? res.TotalCount ?? 0,
-          totalPages: res.totalPages ?? res.TotalPages ?? 0,
-        } satisfies TransactionPage)
-    );
+    return this.#http
+      .get<ApiResponse<TransactionPage>>(`${this.#base}/${portfolioName}/transactions`, {
+        params,
+      })
+      .pipe(
+        map((res: ApiResponse<TransactionPage>) => {
+          const data = res.data;
+          return {
+            data: data?.data ?? [],
+            page: data?.page ?? 1,
+            pageSize: data?.pageSize ?? opts.pageSize ?? 20,
+            totalCount: data?.totalCount ?? 0,
+            totalPages: data?.totalPages ?? 0,
+          } satisfies TransactionPage;
+        })
+      );
   }
 
   async getAllTransactions(
@@ -65,13 +74,15 @@ export class PortfolioService {
     const all: Transaction[] = [];
 
     while (true) {
-      const res = await this.getTransactions(portfolioName, {
-        page,
-        pageSize,
-        from: opts.from ?? undefined,
-        to: opts.to ?? undefined,
-        search: opts.search ?? undefined,
-      });
+      const res = await firstValueFrom(
+        this.getTransactions(portfolioName, {
+          page,
+          pageSize,
+          from: opts.from ?? undefined,
+          to: opts.to ?? undefined,
+          search: opts.search ?? undefined,
+        })
+      );
 
       all.push(...res.data);
 
@@ -83,19 +94,21 @@ export class PortfolioService {
   }
 
   updateTransaction(portfolioName: string, transaction: Transaction) {
-    return firstValueFrom(
-      this.#http.put<Transaction>(
+    return this.#http
+      .put<ApiResponse<Transaction>>(
         `${this.#base}/${portfolioName}/transactions/${transaction.id}`,
         transaction
       )
-    );
+      .pipe(map((res: ApiResponse<Transaction>) => res.data!));
   }
 
   getAnalytics(portfolioName: string, duration: string = 'ALL', frequency: string = 'Daily') {
     const params = new HttpParams().set('duration', duration).set('frequency', frequency);
 
-    return firstValueFrom(
-      this.#http.get<PortfolioAnalytics>(`${this.#base}/${portfolioName}/analytics`, { params })
-    );
+    return this.#http
+      .get<ApiResponse<PortfolioAnalytics>>(`${this.#base}/${portfolioName}/analytics`, {
+        params,
+      })
+      .pipe(map((res: ApiResponse<PortfolioAnalytics>) => res.data!));
   }
 }

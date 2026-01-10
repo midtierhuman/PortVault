@@ -20,7 +20,9 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="Models\Auth\" />
     <Folder Include="TempModels\" />
+    <Folder Include="Utils\" />
   </ItemGroup>
 
 </Project>

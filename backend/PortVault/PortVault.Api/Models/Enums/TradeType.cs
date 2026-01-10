@@ -1,4 +1,4 @@
-﻿namespace PortVault.Api.Models
+namespace PortVault.Api.Models
 {
     public enum TradeType
     {

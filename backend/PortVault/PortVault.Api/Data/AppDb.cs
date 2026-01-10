@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PortVault.Api.Models;
+using PortVault.Api.Models.Entities;
 
 namespace PortVault.Api.Data
 {
@@ -61,6 +61,10 @@ namespace PortVault.Api.Data
 
             modelBuilder.Entity<InstrumentIdentifier>()
                 .Property(i => i.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<AppUser>()
+                .Property(u => u.Role)
                 .HasConversion<string>();
 
             // Removed complex unique constraints for Transactions as we now use deterministic IDs

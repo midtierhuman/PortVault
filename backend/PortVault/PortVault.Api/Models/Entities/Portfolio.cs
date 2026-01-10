@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Entities
 {
     public sealed class Portfolio
     {

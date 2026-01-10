@@ -1,6 +1,6 @@
 using PortVault.Api.Models;
 
-namespace PortVault.Api.Utils
+namespace PortVault.Api.Models.Dtos
 {
     public class TransactionImportDto
     {
@@ -13,7 +13,7 @@ namespace PortVault.Api.Utils
         public TradeType TradeType { get; set; }
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
-        public string? TradeID { get; set; } // Changed from long?
-        public string? OrderID { get; set; } // Changed from long?
+        public string? TradeID { get; set; }
+        public string? OrderID { get; set; }
     }
 }

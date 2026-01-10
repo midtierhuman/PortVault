@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PortVault.Api.Data;
 using PortVault.Api.Models;
+using PortVault.Api.Models.Entities;
 
 namespace PortVault.Api.Repositories
 {
@@ -59,6 +60,19 @@ namespace PortVault.Api.Repositories
             identifier.InstrumentId = instrumentId;
             
             _db.InstrumentIdentifiers.Add(identifier);
+            await _db.SaveChangesAsync();
+            return identifier;
+        }
+
+        public async Task<InstrumentIdentifier?> MoveIdentifierAsync(long instrumentId, long identifierId)
+        {
+            var identifier = await _db.InstrumentIdentifiers.FindAsync(identifierId);
+            if (identifier == null) return null;
+
+            var targetInstrument = await _db.Instruments.FindAsync(instrumentId);
+            if (targetInstrument == null) return null; // Or throw exception
+
+            identifier.InstrumentId = instrumentId;
             await _db.SaveChangesAsync();
             return identifier;
         }

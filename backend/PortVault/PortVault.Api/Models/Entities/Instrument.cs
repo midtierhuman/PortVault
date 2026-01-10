@@ -1,13 +1,8 @@
 using System.Text.Json.Serialization;
+using PortVault.Api.Models;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Entities
 {
-    public enum InstrumentType
-    {
-        MF,
-        EQ
-    }
-
     public class Instrument
     {
         public long Id { get; set; }

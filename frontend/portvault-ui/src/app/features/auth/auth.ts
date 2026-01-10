@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LoginRequest, RegisterRequest } from '../../models/auth.model';
 
@@ -54,7 +55,7 @@ export class AuthComponent {
     });
   }
 
-  onLogin(): void {
+  async onLogin() {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
@@ -69,31 +70,27 @@ export class AuthComponent {
       password: this.loginForm.value.password,
     };
 
-    this.authService.login(loginRequest).subscribe({
-      next: () => {
-        this.snackBar.open('Login successful!', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-        });
-      },
-      error: (error) => {
-        this.isLoading.set(false);
-        const message = error.error?.message || 'Login failed. Please try again.';
-        this.snackBar.open(message, 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
-      },
-      complete: () => {
-        this.isLoading.set(false);
-      },
-    });
+    try {
+      await firstValueFrom(this.authService.login(loginRequest));
+      this.snackBar.open('Login successful!', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    } catch (error: any) {
+      const message = error.error?.message || 'Login failed. Please try again.';
+      this.snackBar.open(message, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar'],
+      });
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
-  onRegister(): void {
+  async onRegister() {
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
       return;
@@ -102,28 +99,24 @@ export class AuthComponent {
     this.isLoading.set(true);
     const registerRequest: RegisterRequest = this.registerForm.value;
 
-    this.authService.register(registerRequest).subscribe({
-      next: () => {
-        this.snackBar.open('Registration successful! Welcome to PortVault!', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-        });
-      },
-      error: (error) => {
-        this.isLoading.set(false);
-        const message = error.error?.message || 'Registration failed. Please try again.';
-        this.snackBar.open(message, 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-          panelClass: ['error-snackbar'],
-        });
-      },
-      complete: () => {
-        this.isLoading.set(false);
-      },
-    });
+    try {
+      await firstValueFrom(this.authService.register(registerRequest));
+      this.snackBar.open('Registration successful! Welcome to PortVault!', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    } catch (error: any) {
+      const message = error.error?.message || 'Registration failed. Please try again.';
+      this.snackBar.open(message, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar'],
+      });
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   getLoginErrorMessage(field: string): string {

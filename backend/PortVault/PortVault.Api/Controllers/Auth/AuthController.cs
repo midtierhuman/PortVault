@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PortVault.Api.Models.Auth;
+using PortVault.Api.Models;
+using PortVault.Api.Models.Dtos;
 using PortVault.Api.Repositories;
 using PortVault.Api.Services;
 
@@ -23,55 +24,63 @@ namespace PortVault.Api.Controllers.Auth
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request data"));
 
             if (await _users.UsernameExistsAsync(request.Username.Trim()))
-                return Conflict(new { error = "Username already exists." });
+                return Conflict(ApiResponse<object>.ErrorResponse("Username already exists"));
 
             if (await _users.EmailExistsAsync(request.Email.Trim()))
-                return Conflict(new { error = "Email already exists." });
+                return Conflict(ApiResponse<object>.ErrorResponse("Email already exists"));
 
-            var user = await _users.CreateAsync(request.Username, request.Email, request.Password);
+            var role = await _users.HasAnyUsersAsync() ? AppRole.User : AppRole.Admin;
+
+            var user = await _users.CreateAsync(request.Username, request.Email, request.Password, role);
             var (token, exp) = _tokens.CreateToken(user);
 
-            return Ok(new AuthResponse
+            var authResponse = new AuthResponse
             {
                 AccessToken = token,
                 ExpiresUtc = exp,
                 Username = user.Username,
                 Email = user.Email
-            });
+            };
+            
+            var response = ApiResponse<AuthResponse>.SuccessResponse(authResponse, "User registered successfully");
+            return Ok(response);
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid request data"));
 
             var hasAnyIdentifier = !string.IsNullOrWhiteSpace(request.Email) || !string.IsNullOrWhiteSpace(request.Username);
             if (!hasAnyIdentifier)
-                return BadRequest(new { error = "Provide either email or username." });
+                return BadRequest(ApiResponse<object>.ErrorResponse("Provide either email or username"));
 
             var user = !string.IsNullOrWhiteSpace(request.Email)
                 ? await _users.GetByEmailAsync(request.Email.Trim())
                 : await _users.GetByUsernameAsync(request.Username!.Trim());
 
             if (user is null)
-                return Unauthorized(new { error = "Invalid credentials." });
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Invalid credentials"));
 
             if (!PasswordHasher.Verify(request.Password, user.PasswordHash, user.PasswordSalt))
-                return Unauthorized(new { error = "Invalid credentials." });
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Invalid credentials"));
 
             var (token, exp) = _tokens.CreateToken(user);
 
-            return Ok(new AuthResponse
+            var authResponse = new AuthResponse
             {
                 AccessToken = token,
                 ExpiresUtc = exp,
                 Username = user.Username,
                 Email = user.Email
-            });
+            };
+            
+            var response = ApiResponse<AuthResponse>.SuccessResponse(authResponse, "Login successful");
+            return Ok(response);
         }
     }
 }

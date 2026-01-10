@@ -1,4 +1,4 @@
-using PortVault.Api.Models;
+using PortVault.Api.Models.Entities;
 
 namespace PortVault.Api.Services
 {

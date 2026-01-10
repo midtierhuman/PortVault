@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Dtos
 {
     public sealed class CreatePortfolioRequest
     {

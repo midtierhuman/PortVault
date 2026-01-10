@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PortVault.Api.Data;
 using PortVault.Api.Models;
+using PortVault.Api.Models.Entities;
 using PortVault.Api.Services;
 
 namespace PortVault.Api.Repositories
@@ -25,7 +26,9 @@ namespace PortVault.Api.Repositories
         public Task<bool> EmailExistsAsync(string email) =>
             _db.Users.AnyAsync(x => x.Email == email);
 
-        public async Task<AppUser> CreateAsync(string username, string email, string password)
+        public Task<bool> HasAnyUsersAsync() => _db.Users.AnyAsync();
+
+        public async Task<AppUser> CreateAsync(string username, string email, string password, AppRole role = AppRole.User)
         {
             var (hash, salt) = PasswordHasher.Hash(password);
 
@@ -36,6 +39,7 @@ namespace PortVault.Api.Repositories
                 Email = email.Trim(),
                 PasswordHash = hash,
                 PasswordSalt = salt,
+                Role = role,
                 CreatedUtc = DateTime.UtcNow
             };
 

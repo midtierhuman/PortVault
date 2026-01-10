@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, computed, linkedSignal, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -13,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { firstValueFrom, of } from 'rxjs';
 import {
   NgApexchartsModule,
   ApexAxisChartSeries,
@@ -26,9 +28,7 @@ import {
 } from 'ng-apexcharts';
 import { PortfolioService } from '../../../core/services/portfolio.service';
 import { Portfolio } from '../../../models/portfolio.model';
-import { Holding } from '../../../models/holding.model';
-import { Transaction, TradeType } from '../../../models/transaction.model';
-import { AnalyticsHistory, SegmentAllocation } from '../../../models/analytics.model';
+import { Transaction, TransactionPage } from '../../../models/transaction.model';
 import { TransactionEditDialogComponent } from './transaction-edit-dialog/transaction-edit-dialog';
 
 @Component({
@@ -58,52 +58,141 @@ export class PortfolioListComponent {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
-  portfolios = signal<Portfolio[]>([]);
+  // -- Component State --
   selectedPortfolio = signal<Portfolio | null>(null);
-  holdings = signal<Holding[]>([]);
-  transactions = signal<Transaction[]>([]);
-  showDetails = signal(false);
-  page = signal(1);
-  pageSize = signal(20);
-  totalPages = signal(0);
-  totalCount = signal(0);
+
+  // Linked states that reset/update when portfolio changes
+  page = linkedSignal({
+    source: this.selectedPortfolio,
+    computation: () => 1,
+  });
+
+  showDetails = linkedSignal({
+    source: this.selectedPortfolio,
+    computation: () => false,
+  });
+
+  // Filter State
   listFilterFrom = signal<Date | null>(this.getDefaultFromDate());
   listFilterTo = signal<Date | null>(this.getDefaultToDate());
   listFilterSearch = signal<string>('');
-  sortField = signal<
-    'symbol' | 'tradeType' | 'quantity' | 'price' | 'tradeDate' | 'segment' | 'tradeID' | null
-  >(null);
+
+  pageSize = signal(20);
+
+  sortField = signal<keyof Transaction | null>(null);
   sortDir = signal<'asc' | 'desc'>('asc');
-  isLoading = signal(true);
-  isLoadingDetails = signal(false);
-  isLoadingTransactions = signal(false);
-  isLoadingChart = signal(false);
+
+  // Chart State
   duration = signal<'1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL'>('ALL');
   frequency = signal<'Daily' | 'Weekly' | 'Monthly'>('Daily');
-  analyticsHistory = signal<AnalyticsHistory[]>([]);
-  segmentAllocation = signal<SegmentAllocation[]>([]);
-  chartSeries = signal<ApexAxisChartSeries>([]);
-  chartOptions = signal<{
-    chart: ApexChart;
-    xaxis: ApexXAxis;
-    yaxis: ApexYAxis | ApexYAxis[];
-    stroke: ApexStroke;
-    dataLabels: ApexDataLabels;
-    tooltip: ApexTooltip;
-    plotOptions: ApexPlotOptions;
-  }>({
-    chart: { type: 'line', height: 360, toolbar: { show: false } },
-    xaxis: { categories: [] },
-    dataLabels: { enabled: false },
-    stroke: { width: [0, 3], curve: 'smooth' },
-    plotOptions: { bar: { columnWidth: '60%' } },
-    tooltip: { shared: true },
-    yaxis: { labels: { formatter: (val) => `₹${Number(val).toLocaleString('en-IN')}` } },
+
+  // -- Resources (Data Fetching) --
+
+  // 1. Portfolios
+  portfoliosResource = rxResource({
+    stream: () => this.portfolioService.getAll(),
   });
 
-  ngOnInit() {
-    this.loadPortfolios();
-  }
+  // 2. Holdings (depends on selectedPortfolio)
+  holdingsResource = rxResource({
+    params: () => this.selectedPortfolio()?.name,
+    stream: ({ params }) => {
+      if (!params) return of([]);
+      return this.portfolioService.getHoldings(params);
+    },
+  });
+
+  // 3. Transactions (depends on portfolio, page, filters)
+  transactionsResource = rxResource({
+    params: () => {
+      const p = this.selectedPortfolio();
+      if (!p) return null;
+      return {
+        name: p.name,
+        page: this.page(),
+        pageSize: this.pageSize(),
+        from: this.listFilterFrom(),
+        to: this.listFilterTo(),
+        search: this.listFilterSearch(), // Usually debouncing is handled by signal updates or manual trigger
+      };
+    },
+    stream: ({ params }) => {
+      if (!params) return of(this.getEmptyTransactionPage());
+      return this.portfolioService.getTransactions(params.name, {
+        page: params.page,
+        pageSize: params.pageSize,
+        from: params.from?.toISOString().split('T')[0],
+        to: params.to?.toISOString().split('T')[0],
+        search: params.search || undefined,
+      });
+    },
+  });
+
+  // 4. Analytics (Chart Data)
+  analyticsResource = rxResource({
+    params: () => {
+      const p = this.selectedPortfolio();
+      if (!p) return null;
+      return { name: p.name, duration: this.duration(), frequency: this.frequency() };
+    },
+    stream: ({ params }) => {
+      if (!params) return of({ history: [], segmentAllocation: [] });
+      return this.portfolioService.getAnalytics(params.name, params.duration, params.frequency);
+    },
+  });
+
+  // -- Computed Views --
+
+  portfolios = computed(() => this.portfoliosResource.value() || []);
+  holdings = computed(() => this.holdingsResource.value() || []);
+
+  // Sorted Transactions
+  transactions = computed(() => {
+    const rawData = this.transactionsResource.value()?.data || [];
+    return this.sortData(rawData);
+  });
+
+  totalPages = computed(() => this.transactionsResource.value()?.totalPages || 0);
+  totalCount = computed(() => this.transactionsResource.value()?.totalCount || 0);
+
+  // Chart Data Computation
+  chartOptions = computed(() => {
+    const history = this.analyticsResource.value()?.history || [];
+    const categories = history.map((h) => h.date);
+    const investedValues = history.map((h) => h.invested);
+
+    return {
+      chart: { type: 'area', height: 360, toolbar: { show: false } } as ApexChart,
+      xaxis: { categories, labels: { rotate: -45 } } as ApexXAxis,
+      dataLabels: { enabled: false } as ApexDataLabels,
+      stroke: { width: 2, curve: 'smooth' } as ApexStroke,
+      yaxis: {
+        labels: {
+          formatter: (val: number) =>
+            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+        },
+      } as ApexYAxis,
+      tooltip: {
+        shared: true,
+        y: {
+          formatter: (val: number) =>
+            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+        },
+      } as ApexTooltip,
+      series: [
+        { name: 'Invested Amount', type: 'area', data: investedValues },
+      ] as ApexAxisChartSeries,
+      plotOptions: {} as ApexPlotOptions,
+    };
+  });
+
+  chartSeries = computed(() => this.chartOptions().series);
+
+  // Loading States
+  isLoading = computed(() => this.portfoliosResource.isLoading());
+  isLoadingDetails = computed(() => this.holdingsResource.isLoading());
+  isLoadingTransactions = computed(() => this.transactionsResource.isLoading());
+  isLoadingChart = computed(() => this.analyticsResource.isLoading());
 
   private getDefaultFromDate(): Date {
     const date = new Date();
@@ -115,229 +204,91 @@ export class PortfolioListComponent {
     return new Date();
   }
 
-  private loadPortfolios() {
-    this.isLoading.set(true);
-    this.portfolioService
-      .getAll()
-      .then((p) => {
-        this.portfolios.set(p);
-      })
-      .catch((error) => {
-        console.error('Failed to load portfolios:', error);
-        this.snackBar.open('Failed to load portfolios. Please try again.', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-        });
-      })
-      .finally(() => {
-        this.isLoading.set(false);
-      });
+  private getEmptyTransactionPage(): TransactionPage {
+    return { data: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 };
   }
 
   selectPortfolio(portfolio: Portfolio) {
     this.selectedPortfolio.set(portfolio);
-    this.page.set(1);
-    this.showDetails.set(false);
-    this.loadPortfolioDetails(portfolio.name);
+    // page and showDetails reset automatically via linkedSignal
   }
 
-  private async loadPortfolioDetails(portfolioName: string) {
-    this.isLoadingDetails.set(true);
-    try {
-      const [holdings] = await Promise.all([
-        this.portfolioService.getHoldings(portfolioName),
-        this.loadTransactionsForChart(false),
-      ]);
-      this.holdings.set(holdings);
-    } catch (error) {
-      console.error('Failed to load portfolio details:', error);
-      this.snackBar.open('Failed to load portfolio details. Please try again.', 'Close', {
-        duration: 5000,
-        horizontalPosition: 'end',
-        verticalPosition: 'top',
-      });
-    } finally {
-      this.isLoadingDetails.set(false);
-    }
-  }
-
-  private async loadTransactions(page = this.page(), showSpinner = true) {
-    const portfolioName = this.selectedPortfolio()?.name;
-    if (!portfolioName) return;
-    if (showSpinner) this.isLoadingTransactions.set(true);
-    try {
-      const fromDate = this.listFilterFrom();
-      const toDate = this.listFilterTo();
-      const res = await this.portfolioService.getTransactions(portfolioName, {
-        page,
-        pageSize: this.pageSize(),
-        from: fromDate ? fromDate.toISOString().split('T')[0] : undefined,
-        to: toDate ? toDate.toISOString().split('T')[0] : undefined,
-        search: this.listFilterSearch()?.trim() || undefined,
-      });
-      this.transactions.set(this.sortData(res.data));
-      this.page.set(res.page);
-      this.pageSize.set(res.pageSize);
-      this.totalPages.set(res.totalPages);
-      this.totalCount.set(res.totalCount);
-    } catch (error) {
-      console.error('Failed to load transactions:', error);
-      this.snackBar.open('Failed to load transactions. Please try again.', 'Close', {
-        duration: 5000,
-        horizontalPosition: 'end',
-        verticalPosition: 'top',
-      });
-    } finally {
-      if (showSpinner) this.isLoadingTransactions.set(false);
-    }
-  }
-
-  private async loadTransactionsForChart(showSpinner = true) {
-    const portfolioName = this.selectedPortfolio()?.name;
-    if (!portfolioName) return;
-    if (showSpinner) this.isLoadingChart.set(true);
-    try {
-      const analytics = await this.portfolioService.getAnalytics(
-        portfolioName,
-        this.duration(),
-        this.frequency()
-      );
-      this.analyticsHistory.set(analytics.history);
-      this.segmentAllocation.set(analytics.segmentAllocation);
-      this.buildChart();
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
-      this.snackBar.open('Failed to load analytics. Please try again.', 'Close', {
-        duration: 5000,
-        horizontalPosition: 'end',
-        verticalPosition: 'top',
-      });
-    } finally {
-      if (showSpinner) this.isLoadingChart.set(false);
-    }
-  }
-
+  // Filter Actions
   applyListFilters() {
-    if (!this.selectedPortfolio()) return;
-    this.page.set(1);
-    this.loadTransactions(1);
+    this.transactionsResource.reload();
   }
 
   resetListFilters() {
-    if (!this.selectedPortfolio()) return;
     this.listFilterFrom.set(this.getDefaultFromDate());
     this.listFilterTo.set(this.getDefaultToDate());
     this.listFilterSearch.set('');
-    this.applyListFilters();
+    // Resource updates automatically due to signal dependencies,
+    // but if we want to ensure reload logic matches exactly:
+    // If signals change, resource re-fetches cleanly.
   }
 
   applyChartFilters() {
-    if (!this.selectedPortfolio()) return;
-    this.loadTransactionsForChart();
+    // Resource updates automatically when duration/frequency signals change
   }
 
   resetChartFilters() {
-    if (!this.selectedPortfolio()) return;
     this.duration.set('ALL');
     this.frequency.set('Daily');
-    this.applyChartFilters();
   }
 
   changeDuration(value: '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL') {
     this.duration.set(value);
-    this.loadTransactionsForChart();
   }
 
   changeFrequency(value: 'Daily' | 'Weekly' | 'Monthly') {
     this.frequency.set(value);
-    this.loadTransactionsForChart();
   }
 
   changePage(delta: number) {
-    if (!this.selectedPortfolio()) return;
     const target = this.page() + delta;
     if (target < 1 || (this.totalPages() && target > this.totalPages())) return;
-    this.loadTransactions(target);
+    this.page.set(target);
   }
 
   changePageSize(size: number) {
-    if (!this.selectedPortfolio()) return;
     this.pageSize.set(size);
     this.page.set(1);
-    this.loadTransactions(1);
   }
 
   toggleDetails() {
-    if (!this.selectedPortfolio()) return;
-    const next = !this.showDetails();
-    this.showDetails.set(next);
-    if (next && this.transactions().length === 0) {
-      this.loadTransactions(1);
-    }
+    this.showDetails.update((v) => !v);
   }
 
-  sortBy(
-    field: 'symbol' | 'tradeType' | 'quantity' | 'price' | 'tradeDate' | 'segment' | 'tradeID'
-  ) {
+  sortBy(field: keyof Transaction) {
     const currentField = this.sortField();
     const currentDir = this.sortDir();
     const nextDir = currentField === field && currentDir === 'asc' ? 'desc' : 'asc';
     this.sortField.set(field);
     this.sortDir.set(nextDir);
-    this.transactions.set(this.sortData(this.transactions()));
   }
 
   private sortData(data: Transaction[]) {
     const field = this.sortField();
     const dir = this.sortDir();
     if (!field) return data;
-    const sorted = [...data].sort((a, b) => {
-      const va: any = a[field];
-      const vb: any = b[field];
+
+    return [...data].sort((a, b) => {
+      const va = a[field];
+      const vb = b[field];
+
       if (field === 'tradeDate') {
-        const da = new Date(va).getTime();
-        const db = new Date(vb).getTime();
+        const da = new Date(va as any).getTime();
+        const db = new Date(vb as any).getTime();
         return da - db;
       }
-      if (typeof va === 'number' && typeof vb === 'number') return va - vb;
-      return String(va ?? '').localeCompare(String(vb ?? ''));
-    });
-    return dir === 'asc' ? sorted : sorted.reverse();
-  }
 
-  private buildChart() {
-    const history = this.analyticsHistory();
-    if (!history.length) {
-      this.chartSeries.set([]);
-      this.chartOptions.update((o) => ({ ...o, xaxis: { categories: [] } }));
-      return;
-    }
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return dir === 'asc' ? va - vb : vb - va;
+      }
 
-    const categories = history.map((h) => h.date);
-    const investedValues = history.map((h) => h.invested);
-
-    this.chartSeries.set([{ name: 'Invested Amount', type: 'area', data: investedValues }]);
-
-    this.chartOptions.set({
-      chart: { type: 'area', height: 360, toolbar: { show: false } },
-      xaxis: { categories, labels: { rotate: -45 } },
-      dataLabels: { enabled: false },
-      stroke: { width: 2, curve: 'smooth' },
-      yaxis: {
-        labels: {
-          formatter: (val) =>
-            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
-        },
-      },
-      tooltip: {
-        shared: true,
-        y: {
-          formatter: (val) =>
-            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
-        },
-      },
-      plotOptions: {},
+      const sa = String(va ?? '');
+      const sb = String(vb ?? '');
+      return dir === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
     });
   }
 
@@ -348,46 +299,40 @@ export class PortfolioListComponent {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result && this.selectedPortfolio()) {
+      if (result) {
         this.updateTransaction(result);
       }
     });
   }
 
-  private updateTransaction(transaction: Transaction) {
+  private async updateTransaction(transaction: Transaction) {
     const portfolioName = this.selectedPortfolio()?.name;
     if (!portfolioName) return;
 
-    this.portfolioService
-      .updateTransaction(portfolioName, transaction)
-      .then(() => {
-        this.snackBar.open('Transaction updated successfully', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-        });
-        this.loadPortfolioDetails(portfolioName);
-      })
-      .catch((error) => {
-        console.error('Failed to update transaction:', error);
-        this.snackBar.open('Failed to update transaction. Please try again.', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-        });
+    try {
+      await firstValueFrom(this.portfolioService.updateTransaction(portfolioName, transaction));
+
+      this.snackBar.open('Transaction updated successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
       });
+
+      // Reload resources
+      this.holdingsResource.reload();
+      this.transactionsResource.reload();
+      this.analyticsResource.reload();
+    } catch (error) {
+      console.error('Failed to update transaction:', error);
+      this.snackBar.open('Failed to update transaction. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
   }
 
   backToList() {
     this.selectedPortfolio.set(null);
-    this.holdings.set([]);
-    this.transactions.set([]);
-    this.chartSeries.set([]);
-    this.analyticsHistory.set([]);
-    this.segmentAllocation.set([]);
-    this.totalPages.set(0);
-    this.totalCount.set(0);
-    this.page.set(1);
-    this.showDetails.set(false);
   }
 }

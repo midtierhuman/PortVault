@@ -1,4 +1,4 @@
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Dtos
 {
     public class AnalyticsResponse
     {

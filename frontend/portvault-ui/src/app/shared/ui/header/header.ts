@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, inject } from '@angular/core';
+import { Component, input, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +25,7 @@ export type NavBtn = { label: string; route: string };
   styleUrl: './header.scss',
 })
 export class Header {
-  @Input() navBtns: NavBtn[] = [];
+  navBtns = input<NavBtn[]>([]);
   private router = inject(Router);
   authService = inject(AuthService);
 

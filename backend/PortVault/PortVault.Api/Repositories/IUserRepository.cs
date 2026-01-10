@@ -1,4 +1,5 @@
 using PortVault.Api.Models;
+using PortVault.Api.Models.Entities;
 
 namespace PortVault.Api.Repositories
 {
@@ -9,6 +10,7 @@ namespace PortVault.Api.Repositories
         Task<AppUser?> GetByUsernameAsync(string username);
         Task<bool> UsernameExistsAsync(string username);
         Task<bool> EmailExistsAsync(string email);
-        Task<AppUser> CreateAsync(string username, string email, string password);
+        Task<bool> HasAnyUsersAsync();
+        Task<AppUser> CreateAsync(string username, string email, string password, AppRole role = AppRole.User);
     }
 }

@@ -1,6 +1,6 @@
 using OfficeOpenXml;
 using PortVault.Api.Models;
-using PortVault.Api.Utils;
+using PortVault.Api.Models.Dtos;
 using System.Globalization;
 
 namespace PortVault.Api.Parsers

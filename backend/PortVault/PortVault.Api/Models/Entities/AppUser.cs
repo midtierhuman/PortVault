@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using PortVault.Api.Models;
 
-namespace PortVault.Api.Models
+namespace PortVault.Api.Models.Entities
 {
     public sealed class AppUser
     {
@@ -24,6 +25,9 @@ namespace PortVault.Api.Models
 
         [Required]
         public byte[] PasswordSalt { get; init; } = Array.Empty<byte>();
+
+        [Required]
+        public AppRole Role { get; init; } = AppRole.User;
 
         public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     }

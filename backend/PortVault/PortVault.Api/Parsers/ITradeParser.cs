@@ -1,5 +1,4 @@
-﻿using PortVault.Api.Models;
-using PortVault.Api.Utils;
+﻿using PortVault.Api.Models.Dtos;
 
 namespace PortVault.Api.Parsers
 {

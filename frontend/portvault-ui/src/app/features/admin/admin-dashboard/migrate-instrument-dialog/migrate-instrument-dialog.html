@@ -84,8 +84,10 @@
     <mat-spinner diameter="20"></mat-spinner>
     <span>Migrating...</span>
     } @else {
-    <mat-icon>swap_horiz</mat-icon>
-    <span>Migrate</span>
+    <ng-container>
+      <mat-icon>swap_horiz</mat-icon>
+      <span>Migrate</span>
+    </ng-container>
     }
   </button>
 </mat-dialog-actions>

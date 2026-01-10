@@ -91,8 +91,10 @@
   <button mat-button (click)="onCancel()" [disabled]="isDeleting()">Cancel</button>
   @if (!dependencies()?.canDelete && dependencies()) {
   <button mat-raised-button color="accent" (click)="onMigrate()">
-    <mat-icon>swap_horiz</mat-icon>
-    <span>Migrate to Another Instrument</span>
+    <ng-container>
+      <mat-icon>swap_horiz</mat-icon>
+      <span>Migrate to Another Instrument</span>
+    </ng-container>
   </button>
   } @if (dependencies()?.canDelete) {
   <button
@@ -105,8 +107,10 @@
     <mat-spinner diameter="20"></mat-spinner>
     <span>Deleting...</span>
     } @else {
-    <mat-icon>delete</mat-icon>
-    <span>Delete Instrument</span>
+    <ng-container>
+      <mat-icon>delete</mat-icon>
+      <span>Delete Instrument</span>
+    </ng-container>
     }
   </button>
   }

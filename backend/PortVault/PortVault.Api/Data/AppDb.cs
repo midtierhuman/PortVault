@@ -27,7 +27,7 @@ namespace PortVault.Api.Data
                 .IsUnique();
 
             modelBuilder.Entity<Holding>()
-                .HasKey(h => new { h.PortfolioId, h.ISIN });
+                .HasKey(h => new { h.PortfolioId, h.InstrumentId });
 
             modelBuilder.Entity<Portfolio>()
                 .HasIndex(p => new { p.UserId, p.Name })
@@ -46,10 +46,25 @@ namespace PortVault.Api.Data
             modelBuilder.Entity<InstrumentIdentifier>()
                 .HasIndex(i => new { i.InstrumentId, i.Type, i.Value })
                 .IsUnique();
+            
+            modelBuilder.Entity<Transaction>()
+                .Property(t => t.TradeType)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Asset>()
+                .Property(a => a.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Instrument>()
+                .Property(i => i.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<InstrumentIdentifier>()
+                .Property(i => i.Type)
+                .HasConversion<string>();
 
             // Removed complex unique constraints for Transactions as we now use deterministic IDs
         }
     }
-
 }
 

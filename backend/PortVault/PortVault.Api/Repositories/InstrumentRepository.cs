@@ -47,6 +47,13 @@ namespace PortVault.Api.Repositories
             return existing;
         }
 
+        public async Task<Instrument?> GetByIdentifierAsync(IdentifierType type, string value)
+        {
+            return await _db.Instruments
+                .Include(i => i.Identifiers)
+                .FirstOrDefaultAsync(i => i.Identifiers.Any(id => id.Type == type && id.Value == value));
+        }
+
         public async Task<InstrumentIdentifier> AddIdentifierAsync(long instrumentId, InstrumentIdentifier identifier)
         {
             identifier.InstrumentId = instrumentId;

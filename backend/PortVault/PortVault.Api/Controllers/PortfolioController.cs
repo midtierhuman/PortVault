@@ -132,8 +132,8 @@ namespace PortVault.Api.Controllers
                 Data = items.Select(x => new TransactionResponse
                 {
                     Id = x.Id,
-                    Symbol = x.Symbol,
-                    ISIN = x.ISIN,
+                    Symbol = x.Instrument?.Name ?? string.Empty, // Map from Instrument
+                    ISIN = x.Instrument?.Identifiers.FirstOrDefault(i => i.Type == IdentifierType.ISIN)?.Value ?? string.Empty,
                     TradeDate = x.TradeDate,
                     OrderExecutionTime = x.OrderExecutionTime,
                     Segment = x.Segment,
@@ -258,7 +258,7 @@ namespace PortVault.Api.Controllers
                 await using var stream = file.OpenReadStream();
                 var txns = _parser.Parse(stream, portfolio.Id, userId, null);
 
-                var result = await _repo.AddTransactionsAsync(txns, userId);
+                var result = await _repo.AddTransactionsAsync(txns, portfolio.Id, userId);
 
                 if (result.Errors.Any())
                 {
@@ -275,7 +275,7 @@ namespace PortVault.Api.Controllers
                 {
                     await _repo.RecordFileUploadAsync(new FileUpload
                     {
-                        Id = Guid.NewGuid(),
+                        // Id not set (auto-increment)
                         PortfolioId = portfolio.Id,
                         UserId = userId,
                         FileName = file.FileName,
@@ -314,8 +314,8 @@ namespace PortVault.Api.Controllers
             return Ok();
         }
 
-        [HttpDelete("{name}/transactions/{transactionId:guid}")]
-        public async Task<IActionResult> DeleteTransaction(string name, Guid transactionId)
+        [HttpDelete("{name}/transactions/{transactionId:long}")]
+        public async Task<IActionResult> DeleteTransaction(string name, long transactionId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))

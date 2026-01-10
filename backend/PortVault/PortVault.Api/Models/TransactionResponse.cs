@@ -2,7 +2,7 @@ namespace PortVault.Api.Models
 {
     public sealed class TransactionResponse
     {
-        public Guid Id { get; init; }
+        public long Id { get; init; } // Changed from Guid
         public string Symbol { get; init; } = string.Empty;
         public string ISIN { get; init; } = string.Empty;
         public DateTime TradeDate { get; init; }

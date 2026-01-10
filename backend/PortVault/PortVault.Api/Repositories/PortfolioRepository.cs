@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PortVault.Api.Data;
 using PortVault.Api.Models;
+using PortVault.Api.Utils;
 using System.Text;
 using Microsoft.Data.SqlClient;
 
@@ -48,37 +49,20 @@ namespace PortVault.Api.Repositories
         public async Task<Holding[]> GetHoldingsByPortfolioIdAsync(Guid portfolioId)
         {
             var holdings = await _db.Holdings
+                .Include(h => h.Instrument)
+                .ThenInclude(i => i.Identifiers)
                 .Where(h => h.PortfolioId == portfolioId)
                 .ToArrayAsync();
-
-            if (holdings.Length == 0) return holdings;
-
-            var isins = holdings.Select(h => h.ISIN).Distinct().ToList();
-
-            var symbols = await _db.Transactions
-                .Where(t => t.PortfolioId == portfolioId && isins.Contains(t.ISIN))
-                .Select(t => new { ISIN = t.ISIN, t.Symbol })
-                .Distinct()
-                .ToListAsync();
-
-            var symbolDict = symbols
-                .GroupBy(x => x.ISIN)
-                .ToDictionary(g => g.Key, g => g.First().Symbol);
-
-            foreach (var h in holdings)
-            {
-                if (symbolDict.TryGetValue(h.ISIN, out var s))
-                {
-                    h.Symbol = s;
-                }
-            }
-
+                
             return holdings;
         }
 
         public async Task<(Transaction[] Items, int TotalCount)> GetTransactionsAsync(Guid portfolioId, int page, int pageSize, DateTime? from, DateTime? to, string? search)
         {
-            var query = _db.Transactions.Where(t => t.PortfolioId == portfolioId);
+            var query = _db.Transactions
+                .Include(t => t.Instrument)
+                .ThenInclude(i => i.Identifiers)
+                .Where(t => t.PortfolioId == portfolioId);
 
             if (from.HasValue)
                 query = query.Where(t => t.TradeDate >= from.Value);
@@ -89,9 +73,10 @@ namespace PortVault.Api.Repositories
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();
-                query = query.Where(t => t.Symbol.Contains(s) || t.ISIN.Contains(s));
+                query = query.Where(t => t.Instrument.Name.Contains(s) || 
+                                         t.Instrument.Identifiers.Any(id => id.Value.Contains(s)));
             }
-
+            
             var totalCount = await query.CountAsync();
 
             var items = await query
@@ -108,9 +93,10 @@ namespace PortVault.Api.Repositories
         {
             // 1. Fetch all transactions to calculate running balance correctly
             var transactions = await _db.Transactions
+                .Include(t => t.Instrument)
                 .Where(t => t.PortfolioId == portfolioId)
                 .OrderBy(t => t.TradeDate)
-                .Select(t => new { t.TradeDate, t.TradeType, t.Quantity, t.Price, t.Segment, t.ISIN })
+                .Select(t => new { t.TradeDate, t.TradeType, t.Quantity, t.Price, t.Segment, t.InstrumentId })
                 .ToListAsync();
 
             // 2. Calculate daily running balance (sparse)
@@ -142,8 +128,6 @@ namespace PortVault.Api.Repositories
                 var startDate = from ?? fullHistory.Keys.First();
                 var endDate = DateTime.UtcNow.Date;
                 
-                // Helper to get balance at specific date
-                // Since fullHistory is sparse (only dates with txns), we need the last value <= date
                 var historyKeys = fullHistory.Keys.ToList();
                 
                 decimal GetBalanceAt(DateTime d)
@@ -156,46 +140,28 @@ namespace PortVault.Api.Repositories
                     return fullHistory[historyKeys[nextIdx - 1]];
                 }
 
-                // Generate points based on frequency
                 var freq = frequency?.ToLowerInvariant() ?? "daily";
                 
                 if (freq == "transaction")
                 {
-                    // Add start point
                     historyPoints.Add(new TimePoint { Date = startDate, Invested = GetBalanceAt(startDate) });
-                    
-                    // Add all transaction points in range
                     foreach (var kvp in fullHistory.Where(x => x.Key > startDate && x.Key <= endDate))
                     {
                         historyPoints.Add(new TimePoint { Date = kvp.Key, Invested = kvp.Value });
                     }
-                    
-                    // Add end point
                     if (historyPoints.Last().Date < endDate)
                         historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
                 }
                 else
                 {
-                    // Periodic sampling
-                    var iterator = startDate;
-                    
-                    // Align iterator if needed (e.g. end of month)
-                    // For simplicity, we start at startDate and step forward.
-                    // A more advanced implementation might align to calendar weeks/months.
-                    
+                     var iterator = startDate;
                     while (iterator <= endDate)
                     {
                         historyPoints.Add(new TimePoint { Date = iterator, Invested = GetBalanceAt(iterator) });
-                        
-                        if (freq == "monthly")
-                            iterator = iterator.AddMonths(1);
-                        else if (freq == "weekly")
-                            iterator = iterator.AddDays(7);
-                        else // daily
-                            iterator = iterator.AddDays(1);
+                        if (freq == "monthly") iterator = iterator.AddMonths(1);
+                        else if (freq == "weekly") iterator = iterator.AddDays(7);
+                        else iterator = iterator.AddDays(1);
                     }
-                    
-                    // Ensure the final "today" point is included if not covered
                     if (historyPoints.Last().Date < endDate)
                         historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
                 }
@@ -207,7 +173,7 @@ namespace PortVault.Api.Repositories
                 .ToListAsync();
                 
             var segmentMap = transactions
-                .GroupBy(t => t.ISIN)
+                .GroupBy(t => t.InstrumentId)
                 .ToDictionary(g => g.Key, g => g.Last().Segment);
 
             var allocation = new List<AllocationPoint>();
@@ -216,8 +182,8 @@ namespace PortVault.Api.Repositories
 
             foreach (var h in holdings)
             {
-                var segment = segmentMap.ContainsKey(h.ISIN) && !string.IsNullOrWhiteSpace(segmentMap[h.ISIN]) 
-                    ? segmentMap[h.ISIN] 
+                var segment = segmentMap.ContainsKey(h.InstrumentId) && !string.IsNullOrWhiteSpace(segmentMap[h.InstrumentId]) 
+                    ? segmentMap[h.InstrumentId] 
                     : "Other";
                 
                 var value = h.Qty * h.AvgPrice;
@@ -260,7 +226,7 @@ namespace PortVault.Api.Repositories
             await _db.SaveChangesAsync();
         }
 
-        public async Task DeleteTransactionAsync(Guid transactionId, Guid portfolioId)
+        public async Task DeleteTransactionAsync(long transactionId, Guid portfolioId)
         {
             var transaction = await _db.Transactions
                 .FirstOrDefaultAsync(t => t.Id == transactionId && t.PortfolioId == portfolioId);
@@ -272,47 +238,101 @@ namespace PortVault.Api.Repositories
             }
         }
 
-        public async Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId)
+        public async Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<TransactionImportDto> parsedTransactions, Guid portfolioId, Guid userId)
         {
-            // Fast path: Bulk insert
-            try
+            var transactions = parsedTransactions.ToList();
+            if (!transactions.Any()) return (0, new List<string>());
+
+            var distinctIsins = transactions.Select(t => t.ISIN).Distinct().ToList();
+
+            // 1. Find existing instruments by ISIN
+            var existingIdentifiers = await _db.InstrumentIdentifiers
+                .Where(x => x.Type == IdentifierType.ISIN && distinctIsins.Contains(x.Value))
+                .Select(x => new { x.Value, x.InstrumentId })
+                .ToListAsync();
+
+            var isinToInstrumentId = existingIdentifiers.ToDictionary(x => x.Value, x => x.InstrumentId);
+
+            // 2. Identify new instruments
+            var newIsins = distinctIsins.Except(isinToInstrumentId.Keys).ToList();
+            
+            if (newIsins.Any())
             {
-                await _db.Transactions.AddRangeAsync(transactions);
-                await _db.SaveChangesAsync();
-                
-                // Detach all to keep context clean
-                foreach (var txn in transactions)
+                var newInstrumentsMap = new Dictionary<string, Instrument>(); // ISIN -> Instrument
+
+                foreach (var isin in newIsins)
                 {
-                    _db.Entry(txn).State = EntityState.Detached;
+                    var firstTxn = transactions.First(t => t.ISIN == isin);
+                    var instrument = new Instrument
+                    {
+                        Type = firstTxn.Segment.Equals("MF", StringComparison.OrdinalIgnoreCase) ? InstrumentType.MF : InstrumentType.EQ,
+                        Name = firstTxn.Symbol // Use Symbol as Name initially
+                    };
+                    newInstrumentsMap[isin] = instrument;
+                    _db.Instruments.Add(instrument);
                 }
 
-                return (transactions.Count(), new List<string>());
-            }
-            catch (Exception)
-            {
-                // Fallback: Slow path (one-by-one) to identify specific errors
-                _db.ChangeTracker.Clear();
-                
-                var addedCount = 0;
-                var errors = new List<string>();
-                
-                foreach (var txn in transactions)
+                await _db.SaveChangesAsync();
+
+                var newIdentifiers = new List<InstrumentIdentifier>();
+                foreach (var kvp in newInstrumentsMap)
                 {
-                    try
+                    newIdentifiers.Add(new InstrumentIdentifier
                     {
-                        _db.Transactions.Add(txn);
-                        await _db.SaveChangesAsync();
-                        _db.Entry(txn).State = EntityState.Detached;
-                        addedCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"{txn.Symbol} on {txn.TradeDate:yyyy-MM-dd}: {ex.Message}");
-                        _db.ChangeTracker.Clear();
-                    }
+                        InstrumentId = kvp.Value.Id,
+                        Type = IdentifierType.ISIN,
+                        Value = kvp.Key
+                    });
+                    
+                    // Update map
+                    isinToInstrumentId[kvp.Key] = kvp.Value.Id;
                 }
                 
-                return (addedCount, errors);
+                _db.InstrumentIdentifiers.AddRange(newIdentifiers);
+                await _db.SaveChangesAsync();
+            }
+
+            // 3. Create Transactions
+            var entitiesToAdd = new List<Transaction>();
+            var errors = new List<string>();
+
+            foreach(var dto in transactions)
+            {
+                if(isinToInstrumentId.TryGetValue(dto.ISIN, out var instrumentId))
+                {
+                    entitiesToAdd.Add(new Transaction
+                    {
+                        // Id not set (auto-increment)
+                        PortfolioId = portfolioId,
+                        InstrumentId = instrumentId,
+                        Symbol = dto.Symbol,
+                        TradeDate = dto.TradeDate,
+                        OrderExecutionTime = dto.OrderExecutionTime,
+                        Segment = dto.Segment,
+                        Series = dto.Series,
+                        TradeType = dto.TradeType,
+                        Quantity = dto.Quantity,
+                        Price = dto.Price,
+                        TradeID = dto.TradeID,
+                        OrderID = dto.OrderID
+                    });
+                }
+                else
+                {
+                    errors.Add($"Could not resolve Instrument for ISIN {dto.ISIN}");
+                }
+            }
+
+            try
+            {
+                await _db.Transactions.AddRangeAsync(entitiesToAdd);
+                await _db.SaveChangesAsync();
+                return (entitiesToAdd.Count, errors);
+            }
+            catch (Exception ex)
+            {
+                 errors.Add($"Bulk insert failed: {ex.Message}");
+                 return (0, errors);
             }
         }
         
@@ -334,9 +354,9 @@ namespace PortVault.Api.Repositories
                 .ToListAsync();
 
             var grouped = txns
-                .GroupBy(x => x.ISIN)
+                .GroupBy(x => x.InstrumentId)
                 .Select(g => new {
-                    ISIN = g.Key,
+                    InstrumentId = g.Key,
                     Units = g.Sum(t => t.TradeType == TradeType.Buy ? t.Quantity : -t.Quantity)
                 })
                 .ToList();
@@ -345,13 +365,10 @@ namespace PortVault.Api.Repositories
 
             foreach (var g in grouped)
             {
-                // Skip if the position is effectively closed (within margin of error).
-                // We use a threshold of 0.1 to account for fractional unit mismatches.
-                // Anything outside this range (positive or negative) is considered significant.
                 if (Math.Abs(g.Units) <= 0.1m) continue;
 
                 var buys = txns
-                    .Where(x => x.ISIN == g.ISIN && x.TradeType == TradeType.Buy)
+                    .Where(x => x.InstrumentId == g.InstrumentId && x.TradeType == TradeType.Buy)
                     .ToList();
 
                 var totalBuyQty = buys.Sum(x => x.Quantity);
@@ -361,10 +378,10 @@ namespace PortVault.Api.Repositories
 
                 holdings.Add(new Holding
                 {
-                    Id = Guid.NewGuid(),
+                    // Id not set (auto-increment)
                     AvgPrice = avg,
                     PortfolioId = portfolioId,
-                    ISIN = g.ISIN,
+                    InstrumentId = g.InstrumentId,
                     Qty = g.Units
                 });
             }
@@ -375,14 +392,12 @@ namespace PortVault.Api.Repositories
             if (portfolio != null)
             {
                 portfolio.Invested = totalInvested;
-                portfolio.Current = totalInvested; // Default to invested value until market data is available
+                portfolio.Current = totalInvested; 
             }
 
-            // nuke old holdings
             var old = _db.Holdings.Where(x => x.PortfolioId == portfolioId);
             _db.Holdings.RemoveRange(old);
 
-            // insert fresh
             _db.Holdings.AddRange(holdings);
 
             await _db.SaveChangesAsync();

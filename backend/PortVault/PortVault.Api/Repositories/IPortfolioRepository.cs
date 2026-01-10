@@ -1,4 +1,5 @@
 ﻿using PortVault.Api.Models;
+using PortVault.Api.Utils;
 
 namespace PortVault.Api.Repositories
 {
@@ -12,8 +13,8 @@ namespace PortVault.Api.Repositories
         Task<(Transaction[] Items, int TotalCount)> GetTransactionsAsync(Guid portfolioId, int page, int pageSize, DateTime? from, DateTime? to, string? search);
         Task<AnalyticsResponse> GetPortfolioAnalyticsAsync(Guid portfolioId, DateTime? from, string frequency);
         Task DeleteTransactionsByPortfolioIdAsync(Guid portfolioId);
-        Task DeleteTransactionAsync(Guid transactionId, Guid portfolioId);
-        Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<Transaction> transactions, Guid userId);
+        Task DeleteTransactionAsync(long transactionId, Guid portfolioId);
+        Task<(int AddedCount, List<string> Errors)> AddTransactionsAsync(IEnumerable<TransactionImportDto> transactions, Guid portfolioId, Guid userId);
         Task<bool> RecalculateHolding(Guid portfolioId);
         Task<bool> IsFileUploadedAsync(Guid portfolioId, string fileHash);
         Task RecordFileUploadAsync(FileUpload fileUpload);

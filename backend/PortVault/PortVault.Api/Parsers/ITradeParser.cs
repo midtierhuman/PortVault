@@ -1,11 +1,12 @@
 ﻿using PortVault.Api.Models;
+using PortVault.Api.Utils;
 
 namespace PortVault.Api.Parsers
 {
     public interface ITradeParser
     {
         string Provider { get; }
-        IEnumerable<Transaction> Parse(Stream file, Guid portfolioId, Guid userId, string? password = null);
+        IEnumerable<TransactionImportDto> Parse(Stream file, Guid portfolioId, Guid userId, string? password = null);
         
     }
 }

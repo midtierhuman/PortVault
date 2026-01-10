@@ -4,7 +4,7 @@ namespace PortVault.Api.Models
 {
     public class FileUpload
     {
-        public Guid Id { get; set; }
+        public long Id { get; set; } // Changed from Guid
         public Guid PortfolioId { get; set; }
         public Guid UserId { get; set; }
         public string FileName { get; set; } = string.Empty;

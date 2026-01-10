@@ -1,5 +1,6 @@
 using OfficeOpenXml;
 using PortVault.Api.Models;
+using PortVault.Api.Utils;
 using System.Globalization;
 
 namespace PortVault.Api.Parsers
@@ -8,11 +9,11 @@ namespace PortVault.Api.Parsers
     {
         public string Provider => "unified";
 
-        public IEnumerable<Transaction> Parse(Stream stream, Guid portfolioId, Guid userId, string? password = null)
+        public IEnumerable<TransactionImportDto> Parse(Stream stream, Guid portfolioId, Guid userId, string? password = null)
         {
             ExcelPackage.License.SetNonCommercialOrganization("PortVault");
 
-            var transactions = new List<Transaction>();
+            var transactions = new List<TransactionImportDto>();
 
             using var package = new ExcelPackage(stream);
 
@@ -108,13 +109,8 @@ namespace PortVault.Api.Parsers
                     // Use execution time if available, otherwise default to trade date at midnight
                     var effectiveTime = executionTime ?? tradeDate.Value.Date;
 
-                    // Generate unique ID per transaction
-                    var id = Guid.NewGuid();
-
-                    var transaction = new Transaction
+                    var transaction = new TransactionImportDto
                     {
-                        Id = id,
-                        PortfolioId = portfolioId,
                         Symbol = symbol,
                         ISIN = isin,
                         TradeDate = tradeDate.Value,

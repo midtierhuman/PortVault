@@ -66,8 +66,8 @@ namespace PortVault.Api.Parsers
                     var quantityValue = GetCellValue(worksheet.Cells[row, columnMapping["Quantity"]]);
                     var priceValue = GetCellValue(worksheet.Cells[row, columnMapping["Price"]]);
                     var executionTimeValue = GetCellValue(worksheet.Cells[row, columnMapping["Order Execution Time"]]);
-                    var tradeIdValue = GetCellValue(worksheet.Cells[row, columnMapping["Trade ID"]]);
-                    var orderIdValue = GetCellValue(worksheet.Cells[row, columnMapping["Order ID"]]);
+                    var tradeIdValue = GetIdCellValue(worksheet.Cells[row, columnMapping["Trade ID"]]);
+                    var orderIdValue = GetIdCellValue(worksheet.Cells[row, columnMapping["Order ID"]]);
 
                     // Skip empty rows
                     if (string.IsNullOrWhiteSpace(isin) || string.IsNullOrWhiteSpace(tradeDateValue))
@@ -97,14 +97,9 @@ namespace PortVault.Api.Parsers
                         continue;
 
                     // Parse TradeID and OrderID as nullable
-                    long? tradeId = null;
-                    long? orderId = null;
-                    
-                    if (!string.IsNullOrEmpty(tradeIdValue) && long.TryParse(tradeIdValue, out var tid))
-                        tradeId = tid;
-                    
-                    if (!string.IsNullOrEmpty(orderIdValue) && long.TryParse(orderIdValue, out var oid))
-                        orderId = oid;
+                    // NOTE: Changed to strings to preserve full fidelity and avoid Excel float precision loss for long IDs
+                    string? tradeId = string.IsNullOrWhiteSpace(tradeIdValue) ? null : tradeIdValue;
+                    string? orderId = string.IsNullOrWhiteSpace(orderIdValue) ? null : orderIdValue;
 
                     // Use execution time if available, otherwise default to trade date at midnight
                     var effectiveTime = executionTime ?? tradeDate.Value.Date;
@@ -138,6 +133,21 @@ namespace PortVault.Api.Parsers
         private static string GetCellValue(OfficeOpenXml.ExcelRange cell)
         {
             return cell.Value?.ToString()?.Trim() ?? string.Empty;
+        }
+
+        private static string GetIdCellValue(OfficeOpenXml.ExcelRange cell)
+        {
+            if (cell.Value == null) return string.Empty;
+
+            if (cell.Value is double d)
+            {
+                // Format double to string without scientific notation
+                // This preserves integers up to 15-17 digits which is typical for double precision
+                // Using "0.#########################" ensures we get all available digits without E notation
+                return d.ToString("0.#########################", CultureInfo.InvariantCulture);
+            }
+
+            return cell.Value.ToString()?.Trim() ?? string.Empty;
         }
 
         private static DateTime? ParseDate(string dateValue)

@@ -4,7 +4,7 @@ using PortVault.Api.Models.Auth;
 using PortVault.Api.Repositories;
 using PortVault.Api.Services;
 
-namespace PortVault.Api.Controllers
+namespace PortVault.Api.Controllers.Auth
 {
     [Route("api/[controller]")]
     [ApiController]

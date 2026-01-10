@@ -12,7 +12,7 @@ namespace PortVault.Api.Models
         public string TradeType { get; init; } = string.Empty;
         public decimal Quantity { get; init; }
         public decimal Price { get; init; }
-        public long TradeID { get; init; }
-        public long OrderID { get; init; }
+        public string TradeID { get; init; } = string.Empty; // Changed from long
+        public string OrderID { get; init; } = string.Empty; // Changed from long
     }
 }

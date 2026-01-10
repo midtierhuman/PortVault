@@ -13,7 +13,7 @@ namespace PortVault.Api.Utils
         public TradeType TradeType { get; set; }
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
-        public long? TradeID { get; set; }
-        public long? OrderID { get; set; }
+        public string? TradeID { get; set; } // Changed from long?
+        public string? OrderID { get; set; } // Changed from long?
     }
 }

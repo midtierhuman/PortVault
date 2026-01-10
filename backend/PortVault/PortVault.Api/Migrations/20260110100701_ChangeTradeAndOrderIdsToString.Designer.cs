@@ -12,8 +12,8 @@ using PortVault.Api.Data;
 namespace PortVault.Api.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20260110094223_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260110100701_ChangeTradeAndOrderIdsToString")]
+    partial class ChangeTradeAndOrderIdsToString
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -260,8 +260,8 @@ namespace PortVault.Api.Migrations
                     b.Property<DateTime?>("OrderExecutionTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("OrderID")
-                        .HasColumnType("bigint");
+                    b.Property<string>("OrderID")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("PortfolioId")
                         .HasColumnType("uniqueidentifier");
@@ -287,8 +287,8 @@ namespace PortVault.Api.Migrations
                     b.Property<DateTime>("TradeDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("TradeID")
-                        .HasColumnType("bigint");
+                    b.Property<string>("TradeID")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TradeType")
                         .IsRequired()

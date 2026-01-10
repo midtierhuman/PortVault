@@ -347,6 +347,24 @@ namespace PortVault.Api.Repositories
             await _db.SaveChangesAsync();
         }
 
+        public async Task<IEnumerable<FileUpload>> GetFileUploadsByPortfolioIdAsync(Guid portfolioId)
+        {
+            return await _db.FileUploads
+                .Where(f => f.PortfolioId == portfolioId)
+                .OrderByDescending(f => f.UploadedAt)
+                .ToListAsync();
+        }
+
+        public async Task DeleteFileUploadAsync(long fileId, Guid portfolioId)
+        {
+            var file = await _db.FileUploads.FirstOrDefaultAsync(f => f.Id == fileId && f.PortfolioId == portfolioId);
+            if (file != null)
+            {
+                _db.FileUploads.Remove(file);
+                await _db.SaveChangesAsync();
+            }
+        }
+
         public async Task<bool> RecalculateHolding(Guid portfolioId)
         {
             var txns = await _db.Transactions

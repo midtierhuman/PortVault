@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PortVault.Api.Models;
 using PortVault.Api.Repositories;
 
-namespace PortVault.Api.Controllers
+namespace PortVault.Api.Controllers.Admin
 {
     [Route("api/[controller]")]
     [ApiController]

@@ -22,8 +22,8 @@ namespace PortVault.Api.Models
         public TradeType TradeType { get; init; }
         public decimal Quantity { get; init; }
         public decimal Price { get; init; }
-        public long? TradeID { get; init; }
-        public long? OrderID { get; init; }
+        public string? TradeID { get; init; } // Changed from long?
+        public string? OrderID { get; init; } // Changed from long?
 
         [JsonIgnore]
         public Instrument? Instrument { get; set; }

@@ -18,5 +18,7 @@ namespace PortVault.Api.Repositories
         Task<bool> RecalculateHolding(Guid portfolioId);
         Task<bool> IsFileUploadedAsync(Guid portfolioId, string fileHash);
         Task RecordFileUploadAsync(FileUpload fileUpload);
+        Task<IEnumerable<FileUpload>> GetFileUploadsByPortfolioIdAsync(Guid portfolioId);
+        Task DeleteFileUploadAsync(long fileId, Guid portfolioId);
     }
 }

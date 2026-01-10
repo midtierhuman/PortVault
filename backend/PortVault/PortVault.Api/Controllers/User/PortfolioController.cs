@@ -1,17 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using PortVault.Api.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using PortVault.Api.Models;
+using PortVault.Api.Parsers;
+using PortVault.Api.Repositories;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
-namespace PortVault.Api.Controllers
+namespace PortVault.Api.Controllers.User
 {
-    using Microsoft.AspNetCore.Mvc;
-    using PortVault.Api.Parsers;
-    using PortVault.Api.Repositories;
-    using System.ComponentModel;
-
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -29,7 +26,7 @@ namespace PortVault.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -45,7 +42,7 @@ namespace PortVault.Api.Controllers
         [HttpGet("{name}")]
         public async Task<IActionResult> GetOne(string name)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -68,7 +65,7 @@ namespace PortVault.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -92,7 +89,7 @@ namespace PortVault.Api.Controllers
         [HttpGet("{name}/getholdings")]
         public async Task<IActionResult> GetHoldings(string name)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -118,7 +115,7 @@ namespace PortVault.Api.Controllers
             [FromQuery] DateTime? to = null,
             [FromQuery] string? search = null)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -141,8 +138,8 @@ namespace PortVault.Api.Controllers
                     TradeType = x.TradeType.ToString(),
                     Quantity = x.Quantity,
                     Price = x.Price,
-                    TradeID = x.TradeID ?? 0,
-                    OrderID = x.OrderID ?? 0
+                    TradeID = x.TradeID ?? string.Empty,
+                    OrderID = x.OrderID ?? string.Empty
                 }),
                 Page = page,
                 PageSize = pageSize,
@@ -157,7 +154,7 @@ namespace PortVault.Api.Controllers
             [FromQuery] string duration = "ALL", 
             [FromQuery] string frequency = "Daily")
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -199,20 +196,20 @@ namespace PortVault.Api.Controllers
             };
 
             // Unlock all cells so users can enter data
-            worksheet.Cells.Style.Locked = false;
+            // worksheet.Cells.Style.Locked = false;
 
             for (int i = 0; i < headers.Length; i++)
             {
                 worksheet.Cells[1, i + 1].Value = headers[i];
                 worksheet.Cells[1, i + 1].Style.Font.Bold = true;
-                worksheet.Cells[1, i + 1].Style.Locked = true;
+                // worksheet.Cells[1, i + 1].Style.Locked = true;
             }
 
             // AutoFit columns
             worksheet.Cells.AutoFitColumns();
 
             // Protect the worksheet
-            worksheet.Protection.IsProtected = true;
+            // worksheet.Protection.IsProtected = true;
 
             var content = package.GetAsByteArray();
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PortVault_Transaction_Template.xlsx");
@@ -229,7 +226,7 @@ namespace PortVault.Api.Controllers
             if (extension != ".xlsx" && extension != ".xls")
                 return BadRequest("Only Excel files (.xlsx, .xls) are supported.");
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -303,7 +300,7 @@ namespace PortVault.Api.Controllers
         [HttpPut("{name}/holdings/recalculate")]
         public async Task<IActionResult> RecalculateHoldings(string name)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -317,7 +314,7 @@ namespace PortVault.Api.Controllers
         [HttpDelete("{name}/transactions/{transactionId:long}")]
         public async Task<IActionResult> DeleteTransaction(string name, long transactionId)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -338,7 +335,7 @@ namespace PortVault.Api.Controllers
             if (!confirm)
                 return BadRequest("Safety check: To delete all transactions, you must explicitly provide the query parameter '?confirm=true'.");
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
                 return Unauthorized();
 
@@ -351,7 +348,38 @@ namespace PortVault.Api.Controllers
             return Ok(new { message = "All transactions and holdings cleared for this portfolio." });
         }
 
+        [HttpGet("{name}/files")]
+        public async Task<IActionResult> GetFileUploads(string name)
+        {
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            var files = await _repo.GetFileUploadsByPortfolioIdAsync(portfolio.Id);
+            return Ok(files.Select(f => new 
+            {
+                f.Id,
+                f.FileName,
+                f.UploadedAt,
+                f.TransactionCount
+            }));
+        }
+
+        [HttpDelete("{name}/files/{fileId:long}")]
+        public async Task<IActionResult> DeleteFileUpload(string name, long fileId)
+        {
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized();
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null) return NotFound();
+
+            await _repo.DeleteFileUploadAsync(fileId, portfolio.Id);
+            return Ok(new { message = "File upload deleted." });
+        }
     }
-
 }
-

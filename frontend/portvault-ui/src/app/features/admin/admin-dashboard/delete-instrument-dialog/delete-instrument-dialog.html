@@ -1,0 +1,113 @@
+<h2 mat-dialog-title>
+  <mat-icon class="title-icon">warning</mat-icon>
+  Delete Instrument
+</h2>
+
+<mat-dialog-content>
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Checking dependencies...</p>
+  </div>
+  } @else if (error() && !dependencies()) {
+  <div class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  } @else if (dependencies()) {
+  <div class="content">
+    <p class="instrument-name">
+      Are you sure you want to delete <strong>{{ dependencies()!.instrumentName }}</strong
+      >?
+    </p>
+
+    @if (dependencies()!.canDelete) {
+    <div class="can-delete">
+      <mat-icon class="success-icon">check_circle</mat-icon>
+      <div class="message-box success">
+        <p>{{ dependencies()!.message }}</p>
+      </div>
+
+      @if (dependencies()!.identifierCount > 0) {
+      <div class="identifiers-section">
+        <h4>
+          The following {{ dependencies()!.identifierCount }} identifier(s) will be permanently
+          deleted:
+        </h4>
+        <div class="identifiers-list">
+          @for (identifier of dependencies()!.identifiers; track identifier.id) {
+          <div class="identifier-item">
+            <mat-chip>{{ identifier.type }}</mat-chip>
+            <span class="identifier-value">{{ identifier.value }}</span>
+            @if (identifier.validFrom || identifier.validTo) {
+            <span class="validity">
+              @if (identifier.validFrom) { From: {{ identifier.validFrom | date : 'shortDate' }} }
+              @if (identifier.validTo) { To: {{ identifier.validTo | date : 'shortDate' }} }
+            </span>
+            }
+          </div>
+          }
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="cannot-delete">
+      <mat-icon class="error-icon">cancel</mat-icon>
+      <div class="message-box error">
+        <p>{{ dependencies()!.message }}</p>
+      </div>
+
+      <div class="dependencies-summary">
+        <h4>Dependencies:</h4>
+        <ul>
+          @if (dependencies()!.transactionCount > 0) {
+          <li>
+            <strong>{{ dependencies()!.transactionCount }}</strong> Transaction(s)
+          </li>
+          } @if (dependencies()!.holdingCount > 0) {
+          <li>
+            <strong>{{ dependencies()!.holdingCount }}</strong> Holding(s)
+          </li>
+          } @if (dependencies()!.identifierCount > 0) {
+          <li>
+            <strong>{{ dependencies()!.identifierCount }}</strong> Identifier(s)
+          </li>
+          }
+        </ul>
+        <p class="help-text">
+          Use the Migrate button below to move all dependencies to another instrument first.
+        </p>
+      </div>
+    </div>
+    } @if (error()) {
+    <div class="error-message">{{ error() }}</div>
+    }
+  </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isDeleting()">Cancel</button>
+  @if (!dependencies()?.canDelete && dependencies()) {
+  <button mat-raised-button color="accent" (click)="onMigrate()">
+    <mat-icon>swap_horiz</mat-icon>
+    <span>Migrate to Another Instrument</span>
+  </button>
+  } @if (dependencies()?.canDelete) {
+  <button
+    mat-raised-button
+    color="warn"
+    (click)="onDelete()"
+    [disabled]="isDeleting() || !dependencies()?.canDelete"
+  >
+    @if (isDeleting()) {
+    <mat-spinner diameter="20"></mat-spinner>
+    <span>Deleting...</span>
+    } @else {
+    <mat-icon>delete</mat-icon>
+    <span>Delete Instrument</span>
+    }
+  </button>
+  }
+</mat-dialog-actions>

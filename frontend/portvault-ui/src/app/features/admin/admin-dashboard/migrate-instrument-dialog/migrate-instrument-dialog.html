@@ -1,0 +1,91 @@
+<h2 mat-dialog-title>
+  <mat-icon class="title-icon">swap_horiz</mat-icon>
+  Migrate Instrument
+</h2>
+
+<mat-dialog-content>
+  <div class="content">
+    <p class="description">
+      Migrate all dependencies from <strong>{{ data.sourceInstrumentName }}</strong> to another
+      instrument before deletion.
+    </p>
+
+    <div class="migration-summary">
+      <h4>Items to be migrated:</h4>
+      <ul>
+        @if (data.identifierCount > 0) {
+        <li>
+          <strong>{{ data.identifierCount }}</strong> Identifier(s)
+        </li>
+        } @if (data.transactionCount > 0) {
+        <li>
+          <strong>{{ data.transactionCount }}</strong> Transaction(s)
+        </li>
+        } @if (data.holdingCount > 0) {
+        <li>
+          <strong>{{ data.holdingCount }}</strong> Holding(s)
+        </li>
+        }
+      </ul>
+    </div>
+
+    @if (instrumentsResource.isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="30"></mat-spinner>
+      <p>Loading instruments...</p>
+    </div>
+    } @else if (instrumentsResource.error()) {
+    <div class="error-message">Failed to load instruments</div>
+    } @else if (availableInstruments().length === 0) {
+    <div class="warning-message">
+      <mat-icon>warning</mat-icon>
+      <p>No other instruments available for migration. Create a new instrument first.</p>
+    </div>
+    } @else {
+    <mat-form-field appearance="outline" class="target-select">
+      <mat-label>Select Target Instrument</mat-label>
+      <mat-select [(value)]="selectedTargetId" (valueChange)="selectedTargetId.set($event)">
+        @for (instrument of availableInstruments(); track instrument.id) {
+        <mat-option [value]="instrument.id">
+          <span class="instrument-option">
+            <mat-icon class="instrument-type">{{
+              instrument.type === 'MF' ? 'business' : 'trending_up'
+            }}</mat-icon>
+            <span>{{ instrument.name }}</span>
+            <span class="instrument-type-badge">{{ instrument.type }}</span>
+          </span>
+        </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="info-box">
+      <mat-icon>info</mat-icon>
+      <p>
+        All identifiers, transactions, and holdings will be reassigned to the selected instrument.
+        This action cannot be undone.
+      </p>
+    </div>
+    } @if (error()) {
+    <div class="error-message">{{ error() }}</div>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isMigrating()">Cancel</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onMigrate()"
+    [disabled]="!canMigrate() || isMigrating() || availableInstruments().length === 0"
+  >
+    @if (isMigrating()) {
+    <mat-spinner diameter="20"></mat-spinner>
+    <span>Migrating...</span>
+    } @else {
+    <mat-icon>swap_horiz</mat-icon>
+    <span>Migrate</span>
+    }
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,16 @@
+.identifier-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 400px;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+mat-spinner {
+  display: inline-block;
+}

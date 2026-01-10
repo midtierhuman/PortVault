@@ -1,0 +1,59 @@
+<h2 mat-dialog-title>Add Identifier</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="identifier-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Identifier Type</mat-label>
+      <mat-select formControlName="type">
+        @for (type of identifierTypes; track type) {
+        <mat-option [value]="type">{{ type }}</mat-option>
+        }
+      </mat-select>
+      @if (form.get('type')?.hasError('required') && form.get('type')?.touched) {
+      <mat-error>Type is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Value</mat-label>
+      <input matInput formControlName="value" placeholder="Enter identifier value" />
+      @if (form.get('value')?.hasError('required') && form.get('value')?.touched) {
+      <mat-error>Value is required</mat-error>
+      } @else if (form.get('value')?.hasError('maxlength')) {
+      <mat-error>Value cannot exceed 100 characters</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valid From</mat-label>
+      <input matInput [matDatepicker]="validFromPicker" formControlName="validFrom" />
+      <mat-datepicker-toggle matSuffix [for]="validFromPicker"></mat-datepicker-toggle>
+      <mat-datepicker #validFromPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valid To</mat-label>
+      <input matInput [matDatepicker]="validToPicker" formControlName="validTo" />
+      <mat-datepicker-toggle matSuffix [for]="validToPicker"></mat-datepicker-toggle>
+      <mat-datepicker #validToPicker></mat-datepicker>
+    </mat-form-field>
+  </form>
+
+  @if (error()) {
+  <div class="error-message">{{ error() }}</div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="dialogRef.close()" [disabled]="isLoading()">Cancel</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSubmit()"
+    [disabled]="form.invalid || isLoading()"
+  >
+    @if (isLoading()) {
+    <mat-spinner diameter="20"></mat-spinner>
+    } @else { Add Identifier }
+  </button>
+</mat-dialog-actions>

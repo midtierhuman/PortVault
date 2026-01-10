@@ -1,69 +1,131 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { InstrumentService } from '../../../core/services/instrument.service';
+import {
+  InstrumentResponse,
+  InstrumentType,
+  IdentifierType,
+  CreateInstrumentRequest,
+  UpdateInstrumentRequest,
+  AddInstrumentIdentifierRequest,
+} from '../../../models/instrument.model';
+import { InstrumentDialogComponent } from './instrument-dialog/instrument-dialog';
+import { IdentifierDialogComponent } from './identifier-dialog/identifier-dialog';
+import { DeleteInstrumentDialogComponent } from './delete-instrument-dialog/delete-instrument-dialog';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule],
-  template: `
-    <div class="admin-dashboard-container">
-      <div class="header">
-        <h1>Admin Dashboard</h1>
-        <p>System overview and administration.</p>
-      </div>
-
-      <div class="stats-grid">
-        <mat-card class="stat-card">
-          <mat-card-header>
-            <mat-card-title>Total Users</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="stat-value">{{ totalUsers() }}</div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="stat-card">
-          <mat-card-header>
-            <mat-card-title>System Health</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="stat-value status-ok">OK</div>
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </div>
-  `,
-  styles: [
-    `
-      .admin-dashboard-container {
-        padding: 24px;
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-      .header {
-        margin-bottom: 32px;
-      }
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-      }
-      .stat-card {
-        padding: 16px;
-      }
-      .stat-value {
-        font-size: 3rem;
-        font-weight: 500;
-        margin-top: 16px;
-        color: var(--primary-color, #3f51b5);
-      }
-      .status-ok {
-        color: #4caf50;
-      }
-    `,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTableModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatChipsModule,
+    MatDialogModule,
+    MatProgressSpinnerModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
+  templateUrl: './admin-dashboard.html',
+  styleUrl: './admin-dashboard.scss',
 })
 export class AdminDashboardComponent {
-  totalUsers = signal(150); // Mock data for now
+  private instrumentService = inject(InstrumentService);
+  private dialog = inject(MatDialog);
+
+  searchQuery = signal<string>('');
+  displayedColumns = ['id', 'type', 'name', 'identifiers', 'actions'];
+
+  instrumentsResource = rxResource({
+    params: () => this.searchQuery(),
+    stream: ({ params }) => this.instrumentService.getAll(params || undefined),
+  });
+
+  InstrumentType = InstrumentType;
+  IdentifierType = IdentifierType;
+
+  onSearch(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchQuery.set(value);
+  }
+
+  openCreateDialog(): void {
+    const dialogRef = this.dialog.open(InstrumentDialogComponent, {
+      width: '500px',
+      data: null,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.instrumentsResource.reload();
+      }
+    });
+  }
+
+  openEditDialog(instrument: InstrumentResponse): void {
+    const dialogRef = this.dialog.open(InstrumentDialogComponent, {
+      width: '500px',
+      data: instrument,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.instrumentsResource.reload();
+      }
+    });
+  }
+
+  openAddIdentifierDialog(instrument: InstrumentResponse): void {
+    const dialogRef = this.dialog.open(IdentifierDialogComponent, {
+      width: '500px',
+      data: { instrumentId: instrument.id },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.instrumentsResource.reload();
+      }
+    });
+  }
+
+  deleteIdentifier(identifierId: number): void {
+    if (confirm('Are you sure you want to delete this identifier?')) {
+      this.instrumentService.deleteIdentifier(identifierId).subscribe(() => {
+        this.instrumentsResource.reload();
+      });
+    }
+  }
+
+  openDeleteDialog(instrument: InstrumentResponse): void {
+    const dialogRef = this.dialog.open(DeleteInstrumentDialogComponent, {
+      width: '600px',
+      data: { instrumentId: instrument.id, instrumentName: instrument.name },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.instrumentsResource.reload();
+      }
+    });
+  }
 }

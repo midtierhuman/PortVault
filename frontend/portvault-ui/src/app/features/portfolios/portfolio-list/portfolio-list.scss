@@ -158,7 +158,12 @@ table {
   }
 
   .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
   }
 
   .details-table {
@@ -301,6 +306,160 @@ table {
     button {
       mat-icon {
         margin-right: 8px;
+      }
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    button {
+      mat-icon {
+        margin-right: 4px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
+  // Analytics Dashboard Styles
+  .analytics-tab {
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+
+      .metric-card {
+        padding: 0;
+        transition: transform 0.2s, box-shadow 0.2s;
+
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        &.positive {
+          border-left: 4px solid #2e7d32;
+        }
+
+        &.negative {
+          border-left: 4px solid #c62828;
+        }
+
+        mat-card-content {
+          padding: 20px;
+        }
+
+        .metric-label {
+          font-size: 0.875rem;
+          color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 8px;
+        }
+
+        .metric-value {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #1a237e;
+
+          .metric-percent {
+            font-size: 1rem;
+            margin-left: 8px;
+            font-weight: 600;
+          }
+
+          .metric-subtext {
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: #666;
+            margin-left: 8px;
+          }
+        }
+      }
+    }
+
+    .analytics-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+
+      .duration-field {
+        width: 180px;
+        margin: 0;
+      }
+
+      .frequency-selector {
+        display: flex;
+        gap: 8px;
+
+        .frequency-btn {
+          min-width: 80px;
+          height: 36px;
+        }
+      }
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+
+      .chart-card {
+        padding: 0;
+        transition: transform 0.2s, box-shadow 0.2s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        mat-card-header {
+          padding: 20px 20px 0;
+
+          mat-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #333;
+          }
+        }
+
+        mat-card-content {
+          padding: 16px;
+        }
+
+        .chart-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: #999;
+
+          mat-icon {
+            font-size: 48px;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+          }
+
+          p {
+            margin: 0;
+            font-size: 0.875rem;
+          }
+        }
       }
     }
   }

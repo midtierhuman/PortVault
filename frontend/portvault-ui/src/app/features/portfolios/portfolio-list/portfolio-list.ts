@@ -160,17 +160,25 @@ export class PortfolioListComponent {
   totalPages = computed(() => this.transactionsResource.value()?.totalPages || 0);
   totalCount = computed(() => this.transactionsResource.value()?.totalCount || 0);
 
-  // Chart Data Computation
-  chartOptions = computed(() => {
+  // Analytics Chart Options
+  investmentTrendChartOptions = computed(() => {
     const history = this.analyticsResource.value()?.history || [];
     const categories = history.map((h) => h.date);
     const investedValues = history.map((h) => h.invested);
 
     return {
-      chart: { type: 'area', height: 360, toolbar: { show: false } } as ApexChart,
+      chart: { type: 'area', height: 350, toolbar: { show: false } } as ApexChart,
       xaxis: { categories, labels: { rotate: -45 } } as ApexXAxis,
       dataLabels: { enabled: false } as ApexDataLabels,
       stroke: { width: 2, curve: 'smooth' } as ApexStroke,
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.7,
+          opacityTo: 0.3,
+        },
+      },
       yaxis: {
         labels: {
           formatter: (val: number) =>
@@ -187,17 +195,126 @@ export class PortfolioListComponent {
       series: [
         { name: 'Invested Amount', type: 'area', data: investedValues },
       ] as ApexAxisChartSeries,
-      plotOptions: {} as ApexPlotOptions,
     };
   });
 
-  chartSeries = computed(() => this.chartOptions().series);
+  annualInvestmentChartOptions = computed(() => {
+    const history = this.analyticsResource.value()?.history || [];
+    const annualData = this.aggregateByYear(history);
+
+    return {
+      chart: { type: 'bar', height: 350, toolbar: { show: false } } as ApexChart,
+      xaxis: { categories: annualData.map((d) => d.year) } as ApexXAxis,
+      dataLabels: { enabled: false } as ApexDataLabels,
+      plotOptions: {
+        bar: {
+          borderRadius: 8,
+          columnWidth: '60%',
+        },
+      } as ApexPlotOptions,
+      yaxis: {
+        labels: {
+          formatter: (val: number) =>
+            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+        },
+      } as ApexYAxis,
+      tooltip: {
+        y: {
+          formatter: (val: number) =>
+            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+        },
+      } as ApexTooltip,
+      series: [
+        { name: 'Annual Investment', data: annualData.map((d) => d.invested) },
+      ] as ApexAxisChartSeries,
+    };
+  });
+
+  segmentAllocationChartOptions = computed(() => {
+    const segmentAllocation = this.analyticsResource.value()?.segmentAllocation || [];
+
+    return {
+      chart: { type: 'donut', height: 350 } as ApexChart,
+      labels: segmentAllocation.map((s) => s.segment),
+      series: segmentAllocation.map((s) => s.value),
+      dataLabels: {
+        enabled: true,
+        formatter: (val: number) => `${val.toFixed(1)}%`,
+      } as ApexDataLabels,
+      legend: {
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        y: {
+          formatter: (val: number) =>
+            `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+        },
+      } as ApexTooltip,
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Total Value',
+                formatter: (w: any) => {
+                  const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
+                  return `₹${Number(total).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+                },
+              },
+            },
+          },
+        },
+      } as ApexPlotOptions,
+    };
+  });
+
+  // Portfolio Summary Metrics
+  portfolioMetrics = computed(() => {
+    const portfolio = this.selectedPortfolio();
+    const holdings = this.holdings();
+
+    if (!portfolio) return null;
+
+    const totalInvested = portfolio.invested;
+    const totalCurrent = portfolio.current;
+    const totalPnL = totalCurrent - totalInvested;
+    const totalPnLPercent = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+    const totalHoldings = holdings.length;
+    const positiveHoldings = holdings.filter((h: any) => h.pnl >= 0).length;
+
+    return {
+      totalInvested,
+      totalCurrent,
+      totalPnL,
+      totalPnLPercent,
+      totalHoldings,
+      positiveHoldings,
+    };
+  });
+
+  chartSeries = computed(() => this.investmentTrendChartOptions().series);
 
   // Loading States
   isLoading = computed(() => this.portfoliosResource.isLoading());
   isLoadingDetails = computed(() => this.holdingsResource.isLoading());
   isLoadingTransactions = computed(() => this.transactionsResource.isLoading());
   isLoadingChart = computed(() => this.analyticsResource.isLoading());
+
+  private aggregateByYear(history: any[]): { year: string; invested: number }[] {
+    const yearMap = new Map<string, number>();
+
+    history.forEach((h) => {
+      const year = new Date(h.date).getFullYear().toString();
+      yearMap.set(year, h.invested);
+    });
+
+    return Array.from(yearMap.entries())
+      .map(([year, invested]) => ({ year, invested }))
+      .sort((a, b) => parseInt(a.year) - parseInt(b.year));
+  }
 
   private getDefaultFromDate(): Date {
     const date = new Date();

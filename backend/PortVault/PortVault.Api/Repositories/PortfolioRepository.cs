@@ -3,6 +3,7 @@ using PortVault.Api.Data;
 using PortVault.Api.Models;
 using PortVault.Api.Models.Entities;
 using PortVault.Api.Models.Dtos;
+using PortVault.Api.Services;
 using System.Text;
 using Microsoft.Data.SqlClient;
 
@@ -11,7 +12,13 @@ namespace PortVault.Api.Repositories
     public class PortfolioRepository : IPortfolioRepository
     {
         private readonly AppDb _db;
-        public PortfolioRepository(AppDb db) => _db = db;
+        private readonly ICorporateActionService _corporateActionService;
+
+        public PortfolioRepository(AppDb db, ICorporateActionService corporateActionService)
+        {
+            _db = db;
+            _corporateActionService = corporateActionService;
+        }
 
 
         public async Task<IEnumerable<Portfolio>> GetAllPortfoliosAsync(Guid userId)
@@ -374,34 +381,56 @@ namespace PortVault.Api.Repositories
 
             var grouped = txns
                 .GroupBy(x => x.InstrumentId)
-                .Select(g => new {
-                    InstrumentId = g.Key,
-                    Units = g.Sum(t => t.TradeType == TradeType.Buy ? t.Quantity : -t.Quantity)
-                })
                 .ToList();
 
             var holdings = new List<Holding>();
 
             foreach (var g in grouped)
             {
-                if (Math.Abs(g.Units) <= 0.1m) continue;
+                var instrumentId = g.Key;
+                
+                // Get applicable corporate actions for this instrument
+                var corporateActions = await _corporateActionService.GetApplicableActionsAsync(instrumentId);
+                var actionsList = corporateActions.ToList();
+                
+                // Calculate adjusted quantities for buys and sells
+                var adjustedBuys = new List<(decimal Qty, decimal Price)>();
+                var adjustedSells = new List<decimal>();
+                
+                foreach (var txn in g.OrderBy(t => t.TradeDate))
+                {
+                    var (adjustedQty, adjustedPrice) = _corporateActionService.AdjustForCorporateActions(
+                        txn.Quantity,
+                        txn.Price,
+                        txn.TradeDate,
+                        actionsList
+                    );
+                    
+                    if (txn.TradeType == TradeType.Buy)
+                    {
+                        adjustedBuys.Add((adjustedQty, adjustedPrice));
+                    }
+                    else
+                    {
+                        adjustedSells.Add(adjustedQty);
+                    }
+                }
+                
+                var totalBuyQty = adjustedBuys.Sum(x => x.Qty);
+                var totalSellQty = adjustedSells.Sum();
+                var currentQty = totalBuyQty - totalSellQty;
+                
+                if (Math.Abs(currentQty) <= 0.1m) continue;
 
-                var buys = txns
-                    .Where(x => x.InstrumentId == g.InstrumentId && x.TradeType == TradeType.Buy)
-                    .ToList();
-
-                var totalBuyQty = buys.Sum(x => x.Quantity);
-                var totalBuyAmount = buys.Sum(x => x.Quantity * x.Price);
-
-                var avg = totalBuyQty == 0 ? 0 : totalBuyAmount / totalBuyQty;
+                var totalBuyAmount = adjustedBuys.Sum(x => x.Qty * x.Price);
+                var avgPrice = totalBuyQty == 0 ? 0 : totalBuyAmount / totalBuyQty;
 
                 holdings.Add(new Holding
                 {
-                    // Id not set (auto-increment)
-                    AvgPrice = avg,
+                    AvgPrice = avgPrice,
                     PortfolioId = portfolioId,
-                    InstrumentId = g.InstrumentId,
-                    Qty = g.Units
+                    InstrumentId = instrumentId,
+                    Qty = currentQty
                 });
             }
 

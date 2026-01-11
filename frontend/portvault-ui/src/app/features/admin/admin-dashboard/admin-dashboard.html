@@ -1,126 +1,276 @@
 <div class="admin-dashboard-container">
   <div class="header">
-    <h1>Instrument Management</h1>
-    <p>Manage financial instruments and their identifiers</p>
+    <h1>Admin Dashboard</h1>
+    <p>Manage instruments and corporate actions</p>
   </div>
 
-  <div class="toolbar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Search Instruments</mat-label>
-      <input matInput (input)="onSearch($event)" placeholder="Search by name or type..." />
-      <mat-icon matPrefix>search</mat-icon>
-    </mat-form-field>
+  <mat-tab-group class="admin-tabs" animationDuration="300ms">
+    <!-- Instruments Tab -->
+    <mat-tab label="Instruments">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="toolbar">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Search Instruments</mat-label>
+              <input matInput (input)="onSearch($event)" placeholder="Search by name or type..." />
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
 
-    <button mat-raised-button color="primary" (click)="openCreateDialog()">
-      <mat-icon>add</mat-icon>
-      Create Instrument
-    </button>
-  </div>
-
-  @if (instrumentsResource.isLoading()) {
-  <div class="loading-container">
-    <mat-spinner></mat-spinner>
-    <p>Loading instruments...</p>
-  </div>
-  } @else if (instrumentsResource.error()) {
-  <mat-card class="error-card">
-    <mat-card-content>
-      <mat-icon color="warn">error</mat-icon>
-      <p>Failed to load instruments: {{ instrumentsResource.error() }}</p>
-      <button mat-button (click)="instrumentsResource.reload()">Retry</button>
-    </mat-card-content>
-  </mat-card>
-  } @else if (instrumentsResource.value()) {
-  <div class="table-container">
-    <table mat-table [dataSource]="instrumentsResource.value()!.data" class="instruments-table">
-      <!-- ID Column -->
-      <ng-container matColumnDef="id">
-        <th mat-header-cell *matHeaderCellDef>ID</th>
-        <td mat-cell *matCellDef="let instrument">{{ instrument.id }}</td>
-      </ng-container>
-
-      <!-- Type Column -->
-      <ng-container matColumnDef="type">
-        <th mat-header-cell *matHeaderCellDef>Type</th>
-        <td mat-cell *matCellDef="let instrument">
-          <mat-chip [class]="'type-' + instrument.type.toLowerCase()">
-            {{ instrument.type }}
-          </mat-chip>
-        </td>
-      </ng-container>
-
-      <!-- Name Column -->
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let instrument">{{ instrument.name }}</td>
-      </ng-container>
-
-      <!-- Identifiers Column -->
-      <ng-container matColumnDef="identifiers">
-        <th mat-header-cell *matHeaderCellDef>Identifiers</th>
-        <td mat-cell *matCellDef="let instrument">
-          <div class="identifiers-cell">
-            @for (identifier of instrument.identifiers; track identifier.id) {
-            <div class="identifier-item">
-              <span class="identifier-type">{{ identifier.type }}:</span>
-              <span class="identifier-value">{{ identifier.value }}</span>
-              <button
-                mat-icon-button
-                (click)="deleteIdentifier(identifier.id)"
-                matTooltip="Delete identifier"
-                class="delete-btn"
-              >
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
-            } @empty {
-            <span class="no-identifiers">No identifiers</span>
-            }
-            <button
-              mat-icon-button
-              color="primary"
-              (click)="openAddIdentifierDialog(instrument)"
-              matTooltip="Add identifier"
-            >
-              <mat-icon>add_circle</mat-icon>
+            <button mat-raised-button color="primary" (click)="openCreateDialog()">
+              <mat-icon>add</mat-icon>
+              Create Instrument
             </button>
           </div>
-        </td>
-      </ng-container>
 
-      <!-- Actions Column -->
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
-        <td mat-cell *matCellDef="let instrument">
-          <button mat-icon-button (click)="openEditDialog(instrument)" matTooltip="Edit">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="openDeleteDialog(instrument)"
-            matTooltip="Delete"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
-        </td>
-      </ng-container>
+          @if (instrumentsResource.isLoading()) {
+          <div class="loading-container">
+            <mat-spinner></mat-spinner>
+            <p>Loading instruments...</p>
+          </div>
+          } @else if (instrumentsResource.error()) {
+          <mat-card class="error-card">
+            <mat-card-content>
+              <mat-icon color="warn">error</mat-icon>
+              <p>Failed to load instruments: {{ instrumentsResource.error() }}</p>
+              <button mat-button (click)="instrumentsResource.reload()">Retry</button>
+            </mat-card-content>
+          </mat-card>
+          } @else if (instrumentsResource.value()) {
+          <div class="table-container">
+            <table
+              mat-table
+              [dataSource]="instrumentsResource.value()!.data"
+              class="instruments-table"
+            >
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td mat-cell *matCellDef="let instrument">{{ instrument.id }}</td>
+              </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-    </table>
+              <!-- Type Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let instrument">
+                  <mat-chip [class]="'type-' + instrument.type.toLowerCase()">
+                    {{ instrument.type }}
+                  </mat-chip>
+                </td>
+              </ng-container>
 
-    @if (instrumentsResource.value()!.data.length === 0) {
-    <div class="empty-state">
-      <mat-icon>inventory_2</mat-icon>
-      <h3>No Instruments Found</h3>
-      <p>Create your first instrument to get started</p>
-      <button mat-raised-button color="primary" (click)="openCreateDialog()">
-        <mat-icon>add</mat-icon>
-        Create Instrument
-      </button>
-    </div>
-    }
-  </div>
-  }
+              <!-- Name Column -->
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <td mat-cell *matCellDef="let instrument">{{ instrument.name }}</td>
+              </ng-container>
+
+              <!-- Identifiers Column -->
+              <ng-container matColumnDef="identifiers">
+                <th mat-header-cell *matHeaderCellDef>Identifiers</th>
+                <td mat-cell *matCellDef="let instrument">
+                  <div class="identifiers-cell">
+                    @for (identifier of instrument.identifiers; track identifier.id) {
+                    <div class="identifier-item">
+                      <span class="identifier-type">{{ identifier.type }}:</span>
+                      <span class="identifier-value">{{ identifier.value }}</span>
+                      <button
+                        mat-icon-button
+                        (click)="deleteIdentifier(identifier.id)"
+                        matTooltip="Delete identifier"
+                        class="delete-btn"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                    } @empty {
+                    <span class="no-identifiers">No identifiers</span>
+                    }
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="openAddIdentifierDialog(instrument)"
+                      matTooltip="Add identifier"
+                    >
+                      <mat-icon>add_circle</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let instrument">
+                  <button mat-icon-button (click)="openEditDialog(instrument)" matTooltip="Edit">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="openDeleteDialog(instrument)"
+                    matTooltip="Delete"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+
+            @if (instrumentsResource.value()!.data.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inventory_2</mat-icon>
+              <h3>No Instruments Found</h3>
+              <p>Create your first instrument to get started</p>
+              <button mat-raised-button color="primary" (click)="openCreateDialog()">
+                <mat-icon>add</mat-icon>
+                Create Instrument
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </ng-template>
+    </mat-tab>
+
+    <!-- Corporate Actions Tab -->
+    <mat-tab label="Corporate Actions">
+      <ng-template matTabContent>
+        <div class="tab-content">
+          <div class="toolbar">
+            <div class="spacer"></div>
+            <button mat-raised-button color="accent" (click)="openCreateCorporateActionDialog()">
+              <mat-icon>add</mat-icon>
+              Create Corporate Action
+            </button>
+          </div>
+
+          @if (corporateActionsResource.isLoading()) {
+          <div class="loading-container">
+            <mat-spinner></mat-spinner>
+            <p>Loading corporate actions...</p>
+          </div>
+          } @else if (corporateActionsResource.error()) {
+          <mat-card class="error-card">
+            <mat-card-content>
+              <mat-icon color="warn">error</mat-icon>
+              <p>Failed to load corporate actions: {{ corporateActionsResource.error() }}</p>
+              <button mat-button (click)="corporateActionsResource.reload()">Retry</button>
+            </mat-card-content>
+          </mat-card>
+          } @else if (corporateActionsResource.value()) {
+          <div class="table-container">
+            <table
+              mat-table
+              [dataSource]="corporateActionsResource.value()!.data"
+              class="corporate-actions-table"
+            >
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td mat-cell *matCellDef="let action">{{ action.id }}</td>
+              </ng-container>
+
+              <!-- Type Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let action">
+                  <mat-chip [class]="'type-' + action.type.toLowerCase()">
+                    {{ action.type }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <!-- Ex-Date Column -->
+              <ng-container matColumnDef="exDate">
+                <th mat-header-cell *matHeaderCellDef>Ex-Date</th>
+                <td mat-cell *matCellDef="let action">{{ action.exDate | date : 'mediumDate' }}</td>
+              </ng-container>
+
+              <!-- Parent Instrument Column -->
+              <ng-container matColumnDef="parentInstrument">
+                <th mat-header-cell *matHeaderCellDef>Parent Instrument</th>
+                <td mat-cell *matCellDef="let action">
+                  <div class="instrument-info">
+                    <span class="instrument-name">{{ action.parentInstrumentName }}</span>
+                    <span class="instrument-id">(ID: {{ action.parentInstrumentId }})</span>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Child Instrument Column -->
+              <ng-container matColumnDef="childInstrument">
+                <th mat-header-cell *matHeaderCellDef>Child Instrument</th>
+                <td mat-cell *matCellDef="let action">
+                  @if (action.childInstrumentId) {
+                  <div class="instrument-info">
+                    <span class="instrument-name">{{ action.childInstrumentName }}</span>
+                    <span class="instrument-id">(ID: {{ action.childInstrumentId }})</span>
+                  </div>
+                  } @else {
+                  <span class="no-data">—</span>
+                  }
+                </td>
+              </ng-container>
+
+              <!-- Ratio Column -->
+              <ng-container matColumnDef="ratio">
+                <th mat-header-cell *matHeaderCellDef>Ratio</th>
+                <td mat-cell *matCellDef="let action">
+                  {{ formatRatio(action.ratioNumerator, action.ratioDenominator) }}
+                </td>
+              </ng-container>
+
+              <!-- Cost Percentage Column -->
+              <ng-container matColumnDef="costPercentage">
+                <th mat-header-cell *matHeaderCellDef>Cost %</th>
+                <td mat-cell *matCellDef="let action">{{ action.costPercentageAllocated }}%</td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let action">
+                  <button
+                    mat-icon-button
+                    (click)="openEditCorporateActionDialog(action)"
+                    matTooltip="Edit"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="deleteCorporateAction(action.id)"
+                    matTooltip="Delete"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="corporateActionColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: corporateActionColumns"></tr>
+            </table>
+
+            @if (corporateActionsResource.value()!.data.length === 0) {
+            <div class="empty-state">
+              <mat-icon>corporate_fare</mat-icon>
+              <h3>No Corporate Actions Found</h3>
+              <p>Create your first corporate action to get started</p>
+              <button mat-raised-button color="accent" (click)="openCreateCorporateActionDialog()">
+                <mat-icon>add</mat-icon>
+                Create Corporate Action
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
 </div>

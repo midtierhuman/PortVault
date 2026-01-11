@@ -13,8 +13,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatTabsModule } from '@angular/material/tabs';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { InstrumentService } from '../../../core/services/instrument.service';
+import { CorporateActionService } from '../../../core/services/corporate-action.service';
 import {
   InstrumentResponse,
   InstrumentType,
@@ -23,9 +25,14 @@ import {
   UpdateInstrumentRequest,
   AddInstrumentIdentifierRequest,
 } from '../../../models/instrument.model';
+import {
+  CorporateActionResponse,
+  CorporateActionType,
+} from '../../../models/corporate-action.model';
 import { InstrumentDialogComponent } from './instrument-dialog/instrument-dialog';
 import { IdentifierDialogComponent } from './identifier-dialog/identifier-dialog';
 import { DeleteInstrumentDialogComponent } from './delete-instrument-dialog/delete-instrument-dialog';
+import { CorporateActionDialogComponent } from './corporate-action-dialog/corporate-action-dialog';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -45,24 +52,41 @@ import { DeleteInstrumentDialogComponent } from './delete-instrument-dialog/dele
     MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatTabsModule,
   ],
   templateUrl: './admin-dashboard.html',
   styleUrl: './admin-dashboard.scss',
 })
 export class AdminDashboardComponent {
-  private instrumentService = inject(InstrumentService);
-  private dialog = inject(MatDialog);
+  private readonly instrumentService = inject(InstrumentService);
+  private readonly corporateActionService = inject(CorporateActionService);
+  private readonly dialog = inject(MatDialog);
 
-  searchQuery = signal<string>('');
-  displayedColumns = ['id', 'type', 'name', 'identifiers', 'actions'];
+  readonly searchQuery = signal<string>('');
+  readonly displayedColumns = ['id', 'type', 'name', 'identifiers', 'actions'] as const;
+  readonly corporateActionColumns = [
+    'id',
+    'type',
+    'exDate',
+    'parentInstrument',
+    'childInstrument',
+    'ratio',
+    'costPercentage',
+    'actions',
+  ] as const;
 
-  instrumentsResource = rxResource({
+  readonly instrumentsResource = rxResource({
     params: () => this.searchQuery(),
     stream: ({ params }) => this.instrumentService.getAll(params || undefined),
   });
 
-  InstrumentType = InstrumentType;
-  IdentifierType = IdentifierType;
+  readonly corporateActionsResource = rxResource({
+    stream: () => this.corporateActionService.getAll(),
+  });
+
+  readonly InstrumentType = InstrumentType;
+  readonly IdentifierType = IdentifierType;
+  readonly CorporateActionType = CorporateActionType;
 
   onSearch(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
@@ -127,5 +151,44 @@ export class AdminDashboardComponent {
         this.instrumentsResource.reload();
       }
     });
+  }
+
+  // Corporate Action Methods
+  openCreateCorporateActionDialog(): void {
+    const dialogRef = this.dialog.open(CorporateActionDialogComponent, {
+      width: '600px',
+      data: null,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.corporateActionsResource.reload();
+      }
+    });
+  }
+
+  openEditCorporateActionDialog(corporateAction: CorporateActionResponse): void {
+    const dialogRef = this.dialog.open(CorporateActionDialogComponent, {
+      width: '600px',
+      data: corporateAction,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.corporateActionsResource.reload();
+      }
+    });
+  }
+
+  deleteCorporateAction(id: number): void {
+    if (confirm('Are you sure you want to delete this corporate action?')) {
+      this.corporateActionService.delete(id).subscribe(() => {
+        this.corporateActionsResource.reload();
+      });
+    }
+  }
+
+  formatRatio(numerator: number, denominator: number): string {
+    return `${numerator}:${denominator}`;
   }
 }

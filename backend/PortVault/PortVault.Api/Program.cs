@@ -55,6 +55,8 @@ builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 builder.Services.AddScoped<ITradeParser, UnifiedExcelParser>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IInstrumentRepository, InstrumentRepository>();
+builder.Services.AddScoped<ICorporateActionRepository, CorporateActionRepository>();
+builder.Services.AddScoped<ICorporateActionService, CorporateActionService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));

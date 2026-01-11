@@ -1,0 +1,127 @@
+<h2 mat-dialog-title>{{ isEditMode() ? 'Edit Corporate Action' : 'Create Corporate Action' }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="corporate-action-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Action Type</mat-label>
+      <mat-select formControlName="type">
+        @for (type of corporateActionTypes; track type) {
+        <mat-option [value]="type">{{ type }}</mat-option>
+        }
+      </mat-select>
+      @if (form.get('type')?.hasError('required') && form.get('type')?.touched) {
+      <mat-error>Type is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ex-Date</mat-label>
+      <input matInput [matDatepicker]="picker" formControlName="exDate" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      @if (form.get('exDate')?.hasError('required') && form.get('exDate')?.touched) {
+      <mat-error>Ex-Date is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Parent Instrument</mat-label>
+      <mat-select formControlName="parentInstrumentId">
+        @for (instrument of instruments(); track instrument.id) {
+        <mat-option [value]="instrument.id"
+          >{{ instrument.name }} ({{ instrument.type }})</mat-option
+        >
+        }
+      </mat-select>
+      @if (form.get('parentInstrumentId')?.hasError('required') &&
+      form.get('parentInstrumentId')?.touched) {
+      <mat-error>Parent instrument is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label
+        >Child Instrument @if (requiresChildInstrument()) {<span class="required-indicator">*</span
+        >}</mat-label
+      >
+      <mat-select formControlName="childInstrumentId">
+        <mat-option [value]="null">None</mat-option>
+        @for (instrument of instruments(); track instrument.id) {
+        <mat-option [value]="instrument.id"
+          >{{ instrument.name }} ({{ instrument.type }})</mat-option
+        >
+        }
+      </mat-select>
+      @if (form.get('childInstrumentId')?.hasError('required') &&
+      form.get('childInstrumentId')?.touched) {
+      <mat-error>Child instrument is required for {{ selectedType() }}</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="ratio-fields">
+      <mat-form-field appearance="outline">
+        <mat-label>Ratio Numerator</mat-label>
+        <input matInput type="number" formControlName="ratioNumerator" step="0.000001" />
+        @if (form.get('ratioNumerator')?.hasError('required') &&
+        form.get('ratioNumerator')?.touched) {
+        <mat-error>Numerator is required</mat-error>
+        } @else if (form.get('ratioNumerator')?.hasError('min')) {
+        <mat-error>Must be greater than 0</mat-error>
+        }
+      </mat-form-field>
+
+      <span class="ratio-separator">:</span>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ratio Denominator</mat-label>
+        <input matInput type="number" formControlName="ratioDenominator" step="0.000001" />
+        @if (form.get('ratioDenominator')?.hasError('required') &&
+        form.get('ratioDenominator')?.touched) {
+        <mat-error>Denominator is required</mat-error>
+        } @else if (form.get('ratioDenominator')?.hasError('min')) {
+        <mat-error>Must be greater than 0</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cost Percentage Allocated (%)</mat-label>
+      <input
+        matInput
+        type="number"
+        formControlName="costPercentageAllocated"
+        step="0.01"
+        min="0"
+        max="100"
+      />
+      @if (form.get('costPercentageAllocated')?.hasError('required') &&
+      form.get('costPercentageAllocated')?.touched) {
+      <mat-error>Cost percentage is required</mat-error>
+      } @else if (form.get('costPercentageAllocated')?.hasError('min')) {
+      <mat-error>Must be at least 0</mat-error>
+      } @else if (form.get('costPercentageAllocated')?.hasError('max')) {
+      <mat-error>Cannot exceed 100</mat-error>
+      }
+    </mat-form-field>
+  </form>
+
+  @if (error()) {
+  <div class="error-message">{{ error() }}</div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="dialogRef.close()" [disabled]="isLoading()">Cancel</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onSubmit()"
+    [disabled]="form.invalid || isLoading()"
+  >
+    @if (isLoading()) {
+    <mat-spinner diameter="20"></mat-spinner>
+    } @else {
+    {{ isEditMode() ? 'Update' : 'Create' }}
+    }
+  </button>
+</mat-dialog-actions>

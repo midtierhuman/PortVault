@@ -15,6 +15,7 @@ namespace PortVault.Api.Data
         public DbSet<FileUpload> FileUploads => Set<FileUpload>();
         public DbSet<Instrument> Instruments => Set<Instrument>();
         public DbSet<InstrumentIdentifier> InstrumentIdentifiers => Set<InstrumentIdentifier>();
+        public DbSet<CorporateAction> CorporateActions => Set<CorporateAction>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +48,15 @@ namespace PortVault.Api.Data
                 .HasIndex(i => new { i.InstrumentId, i.Type, i.Value })
                 .IsUnique();
             
+            modelBuilder.Entity<CorporateAction>()
+                .HasIndex(ca => ca.ExDate);
+            
+            modelBuilder.Entity<CorporateAction>()
+                .HasIndex(ca => ca.ParentInstrumentId);
+            
+            modelBuilder.Entity<CorporateAction>()
+                .HasIndex(ca => ca.ChildInstrumentId);
+            
             modelBuilder.Entity<Transaction>()
                 .Property(t => t.TradeType)
                 .HasConversion<string>();
@@ -65,6 +75,10 @@ namespace PortVault.Api.Data
 
             modelBuilder.Entity<AppUser>()
                 .Property(u => u.Role)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<CorporateAction>()
+                .Property(ca => ca.Type)
                 .HasConversion<string>();
 
             // Removed complex unique constraints for Transactions as we now use deterministic IDs

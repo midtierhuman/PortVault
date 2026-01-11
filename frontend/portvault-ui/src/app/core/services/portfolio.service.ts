@@ -4,7 +4,12 @@ import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Holding } from '../../models/holding.model';
 import { Portfolio } from '../../models/portfolio.model';
-import { Transaction, TransactionPage } from '../../models/transaction.model';
+import {
+  Transaction,
+  TransactionPage,
+  CreateTransactionRequest,
+  TransactionUploadResponse,
+} from '../../models/transaction.model';
 import { PortfolioAnalytics } from '../../models/analytics.model';
 import { ApiResponse } from '../../models/api-response.model';
 
@@ -116,5 +121,44 @@ export class PortfolioService {
     return this.#http
       .put<ApiResponse<null>>(`${this.#base}/${portfolioName}/holdings/recalculate`, {})
       .pipe(map((res: ApiResponse<null>) => res));
+  }
+
+  addTransaction(portfolioName: string, request: CreateTransactionRequest) {
+    return this.#http
+      .post<ApiResponse<{ addedCount: number }>>(
+        `${this.#base}/${portfolioName}/transactions`,
+        request
+      )
+      .pipe(map((res: ApiResponse<{ addedCount: number }>) => res));
+  }
+
+  deleteTransaction(portfolioName: string, transactionId: string) {
+    return this.#http
+      .delete<ApiResponse<null>>(`${this.#base}/${portfolioName}/transactions/${transactionId}`)
+      .pipe(map((res: ApiResponse<null>) => res));
+  }
+
+  clearAllTransactions(portfolioName: string) {
+    return this.#http
+      .delete<ApiResponse<null>>(`${this.#base}/${portfolioName}/transactions/all?confirm=true`)
+      .pipe(map((res: ApiResponse<null>) => res));
+  }
+
+  uploadTransactions(portfolioName: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.#http
+      .post<ApiResponse<TransactionUploadResponse>>(
+        `${this.#base}/${portfolioName}/transactions/upload`,
+        formData
+      )
+      .pipe(map((res: ApiResponse<TransactionUploadResponse>) => res));
+  }
+
+  downloadTemplate() {
+    return this.#http.get(`${environment.apiUrl}/portfolio/transactions/template`, {
+      responseType: 'blob',
+    });
   }
 }

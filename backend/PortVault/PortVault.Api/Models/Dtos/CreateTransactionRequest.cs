@@ -5,6 +5,7 @@ namespace PortVault.Api.Models.Dtos
 {
     public sealed class CreateTransactionRequest
     {
+        /// <example>TATASTEEL</example>
         [Required]
         [StringLength(100, MinimumLength = 1)]
         public string Symbol { get; init; } = string.Empty;

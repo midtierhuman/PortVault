@@ -235,54 +235,73 @@
             <div class="transactions-section">
               <div class="section-header">
                 <h3 class="section-title">Transaction History</h3>
-                <div class="tx-filters">
-                  <mat-form-field appearance="outline" class="filter-field">
-                    <mat-label>Search</mat-label>
-                    <input
-                      matInput
-                      placeholder="Symbol or ISIN"
-                      [value]="listFilterSearch()"
-                      (input)="listFilterSearch.set($any($event.target).value)"
-                    />
-                    <mat-icon matPrefix>search</mat-icon>
-                  </mat-form-field>
+                <div class="action-buttons">
+                  <button mat-raised-button color="primary" (click)="openAddTransactionDialog()">
+                    <mat-icon>add</mat-icon>
+                    Add Transaction
+                  </button>
+                  <button mat-stroked-button color="accent" (click)="openUploadDialog()">
+                    <mat-icon>upload_file</mat-icon>
+                    Upload Excel
+                  </button>
+                  <button mat-stroked-button (click)="downloadTemplate()">
+                    <mat-icon>download</mat-icon>
+                    Download Template
+                  </button>
+                  <button mat-stroked-button color="warn" (click)="clearAllTransactions()">
+                    <mat-icon>delete_sweep</mat-icon>
+                    Clear All
+                  </button>
+                </div>
+              </div>
 
-                  <mat-form-field appearance="outline" class="filter-field">
-                    <mat-label>From Date</mat-label>
-                    <input
-                      matInput
-                      [matDatepicker]="fromPicker"
-                      [value]="listFilterFrom() ?? ''"
-                      (dateChange)="listFilterFrom.set($any($event.target).value || null)"
-                      readonly
-                    />
-                    <mat-datepicker-toggle matPrefix [for]="fromPicker"></mat-datepicker-toggle>
-                    <mat-datepicker #fromPicker></mat-datepicker>
-                  </mat-form-field>
+              <div class="tx-filters">
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>Search</mat-label>
+                  <input
+                    matInput
+                    placeholder="Symbol or ISIN"
+                    [value]="listFilterSearch()"
+                    (input)="listFilterSearch.set($any($event.target).value)"
+                  />
+                  <mat-icon matPrefix>search</mat-icon>
+                </mat-form-field>
 
-                  <mat-form-field appearance="outline" class="filter-field">
-                    <mat-label>To Date</mat-label>
-                    <input
-                      matInput
-                      [matDatepicker]="toPicker"
-                      [value]="listFilterTo() ?? ''"
-                      (dateChange)="listFilterTo.set($any($event.target).value || null)"
-                      readonly
-                    />
-                    <mat-datepicker-toggle matPrefix [for]="toPicker"></mat-datepicker-toggle>
-                    <mat-datepicker #toPicker></mat-datepicker>
-                  </mat-form-field>
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>From Date</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="fromPicker"
+                    [value]="listFilterFrom() ?? ''"
+                    (dateChange)="listFilterFrom.set($any($event.target).value || null)"
+                    readonly
+                  />
+                  <mat-datepicker-toggle matPrefix [for]="fromPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #fromPicker></mat-datepicker>
+                </mat-form-field>
 
-                  <div class="filter-actions">
-                    <button mat-raised-button color="primary" (click)="applyListFilters()">
-                      <mat-icon>filter_list</mat-icon>
-                      Apply Filters
-                    </button>
-                    <button mat-stroked-button (click)="resetListFilters()">
-                      <mat-icon>clear</mat-icon>
-                      Reset
-                    </button>
-                  </div>
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>To Date</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="toPicker"
+                    [value]="listFilterTo() ?? ''"
+                    (dateChange)="listFilterTo.set($any($event.target).value || null)"
+                    readonly
+                  />
+                  <mat-datepicker-toggle matPrefix [for]="toPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #toPicker></mat-datepicker>
+                </mat-form-field>
+
+                <div class="filter-actions">
+                  <button mat-raised-button color="primary" (click)="applyListFilters()">
+                    <mat-icon>filter_list</mat-icon>
+                    Apply Filters
+                  </button>
+                  <button mat-stroked-button (click)="resetListFilters()">
+                    <mat-icon>clear</mat-icon>
+                    Reset
+                  </button>
                 </div>
               </div>
 
@@ -351,10 +370,13 @@
                 </ng-container>
 
                 <ng-container matColumnDef="action">
-                  <th mat-header-cell *matHeaderCellDef></th>
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
                   <td mat-cell *matCellDef="let t">
                     <button mat-icon-button color="primary" (click)="editTransaction(t)">
                       <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteTransaction(t.id)">
+                      <mat-icon>delete</mat-icon>
                     </button>
                   </td>
                 </ng-container>

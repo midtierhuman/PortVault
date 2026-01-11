@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using PortVault.Api.Data;
 using PortVault.Api.Parsers;
 using PortVault.Api.Repositories;
@@ -20,31 +21,42 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.AddSecurityDefinition("Bearer", new()
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "PortVault API",
+        Description = "Portfolio management and investment tracking API with support for transactions, holdings, and corporate actions"
+    });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
     });
 
-    c.AddSecurityRequirement(new()
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },
             Array.Empty<string>()
         }
     });
+    
+    // Better enum handling - show strings instead of numbers
+    c.SchemaFilter<EnumSchemaFilter>();
 });
+
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("f", x => x.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
@@ -111,7 +123,12 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.DocumentTitle = "PortVault API Documentation";
+        c.DisplayRequestDuration();
+        c.EnableDeepLinking();
+    });
 }
 
 app.UseHttpsRedirection();
@@ -123,3 +140,21 @@ app.UseCors("f");
 app.MapControllers();
 
 app.Run();
+
+// Enum schema filter to show enums as strings in Swagger
+public class EnumSchemaFilter : Swashbuckle.AspNetCore.SwaggerGen.ISchemaFilter
+{
+    public void Apply(Microsoft.OpenApi.Models.OpenApiSchema schema, Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext context)
+    {
+        if (context.Type.IsEnum)
+        {
+            schema.Type = "string";
+            schema.Format = null;
+            schema.Enum.Clear();
+            foreach (var name in Enum.GetNames(context.Type))
+            {
+                schema.Enum.Add(new Microsoft.OpenApi.Any.OpenApiString(name));
+            }
+        }
+    }
+}

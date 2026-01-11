@@ -26,3 +26,25 @@ export interface TransactionPage {
   totalCount: number;
   totalPages: number;
 }
+
+export interface CreateTransactionRequest {
+  symbol: string;
+  isin: string;
+  tradeDate: Date;
+  orderExecutionTime?: Date;
+  segment: string;
+  series: string;
+  tradeType: string;
+  quantity: number;
+  price: number;
+  tradeID?: string;
+  orderID?: string;
+}
+
+export interface TransactionUploadResponse {
+  message: string;
+  totalProcessed: number;
+  newTransactions?: number;
+  addedCount: number;
+  errors: string[];
+}

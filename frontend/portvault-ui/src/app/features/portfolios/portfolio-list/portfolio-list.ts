@@ -28,8 +28,13 @@ import {
 } from 'ng-apexcharts';
 import { PortfolioService } from '../../../core/services/portfolio.service';
 import { Portfolio } from '../../../models/portfolio.model';
-import { Transaction, TransactionPage } from '../../../models/transaction.model';
+import {
+  Transaction,
+  TransactionPage,
+  CreateTransactionRequest,
+} from '../../../models/transaction.model';
 import { TransactionEditDialogComponent } from './transaction-edit-dialog/transaction-edit-dialog';
+import { TransactionAddDialogComponent } from './transaction-add-dialog/transaction-add-dialog';
 
 @Component({
   selector: 'app-portfolio-list',
@@ -351,6 +356,188 @@ export class PortfolioListComponent {
     } catch (error) {
       console.error('Failed to recalculate holdings:', error);
       this.snackBar.open('Failed to recalculate holdings. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
+  async deleteTransaction(transactionId: string) {
+    if (!confirm('Are you sure you want to delete this transaction?')) return;
+
+    const portfolioName = this.selectedPortfolio()?.name;
+    if (!portfolioName) return;
+
+    try {
+      await firstValueFrom(this.portfolioService.deleteTransaction(portfolioName, transactionId));
+
+      this.snackBar.open('Transaction deleted successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+
+      // Reload resources
+      this.transactionsResource.reload();
+      this.holdingsResource.reload();
+      this.analyticsResource.reload();
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+      this.snackBar.open('Failed to delete transaction. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
+  async clearAllTransactions() {
+    const confirmed = confirm(
+      'Are you sure you want to delete ALL transactions? This action cannot be undone!'
+    );
+    if (!confirmed) return;
+
+    const doubleConfirm = confirm(
+      'This will permanently delete all transactions and recalculate holdings. Continue?'
+    );
+    if (!doubleConfirm) return;
+
+    const portfolioName = this.selectedPortfolio()?.name;
+    if (!portfolioName) return;
+
+    try {
+      await firstValueFrom(this.portfolioService.clearAllTransactions(portfolioName));
+
+      this.snackBar.open('All transactions cleared successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+
+      // Reload resources
+      this.transactionsResource.reload();
+      this.holdingsResource.reload();
+      this.analyticsResource.reload();
+    } catch (error) {
+      console.error('Failed to clear transactions:', error);
+      this.snackBar.open('Failed to clear transactions. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
+  openAddTransactionDialog() {
+    const dialogRef = this.dialog.open(TransactionAddDialogComponent, {
+      width: '700px',
+    });
+
+    dialogRef.afterClosed().subscribe(async (result: CreateTransactionRequest | undefined) => {
+      if (result) {
+        await this.addTransaction(result);
+      }
+    });
+  }
+
+  async addTransaction(request: CreateTransactionRequest) {
+    const portfolioName = this.selectedPortfolio()?.name;
+    if (!portfolioName) return;
+
+    try {
+      await firstValueFrom(this.portfolioService.addTransaction(portfolioName, request));
+
+      this.snackBar.open('Transaction added successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+
+      // Reload resources
+      this.transactionsResource.reload();
+      this.holdingsResource.reload();
+      this.analyticsResource.reload();
+    } catch (error) {
+      console.error('Failed to add transaction:', error);
+      this.snackBar.open('Failed to add transaction. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
+  openUploadDialog() {
+    // Create file input dynamically
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        await this.uploadExcelFile(file);
+      }
+    };
+    input.click();
+  }
+
+  async uploadExcelFile(file: File) {
+    const portfolioName = this.selectedPortfolio()?.name;
+    if (!portfolioName) return;
+
+    try {
+      const response = await firstValueFrom(
+        this.portfolioService.uploadTransactions(portfolioName, file)
+      );
+
+      if (response.success && response.data) {
+        const data = response.data;
+        let message = `Successfully processed ${data.addedCount} transactions`;
+        if (data.errors && data.errors.length > 0) {
+          message += `. ${data.errors.length} errors occurred.`;
+        }
+
+        this.snackBar.open(message, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+        });
+
+        // Reload resources
+        this.transactionsResource.reload();
+        this.holdingsResource.reload();
+        this.analyticsResource.reload();
+      }
+    } catch (error: any) {
+      console.error('Failed to upload file:', error);
+      const errorMessage = error?.error?.message || 'Failed to upload file. Please try again.';
+      this.snackBar.open(errorMessage, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
+  async downloadTemplate() {
+    try {
+      const blob = await firstValueFrom(this.portfolioService.downloadTemplate());
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'PortVault_Transaction_Template.xlsx';
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      this.snackBar.open('Template downloaded successfully', 'Close', {
+        duration: 2000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    } catch (error) {
+      console.error('Failed to download template:', error);
+      this.snackBar.open('Failed to download template. Please try again.', 'Close', {
         duration: 5000,
         horizontalPosition: 'end',
         verticalPosition: 'top',

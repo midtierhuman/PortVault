@@ -4,12 +4,13 @@ namespace PortVault.Api.Models.Dtos
     {
         public List<TimePoint> History { get; set; } = new();
         public List<AllocationPoint> SegmentAllocation { get; set; } = new();
+        public string ViewType { get; set; } = "cumulative";
     }
 
     public class TimePoint
     {
         public DateTime Date { get; set; }
-        public decimal Invested { get; set; }
+        public decimal Amount { get; set; }
     }
 
     public class AllocationPoint

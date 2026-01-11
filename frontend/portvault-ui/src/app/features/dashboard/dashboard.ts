@@ -151,7 +151,7 @@ export class DashboardComponent implements OnInit {
     }
 
     const categories = history.map((h) => h.date);
-    const investedValues = history.map((h) => h.invested);
+    const investedValues = history.map((h) => h.amount);
 
     this.chartSeries.set([{ name: 'Invested Amount', type: 'area', data: investedValues }]);
 

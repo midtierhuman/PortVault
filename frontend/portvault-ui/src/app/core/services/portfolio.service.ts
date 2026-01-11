@@ -107,8 +107,16 @@ export class PortfolioService {
       .pipe(map((res: ApiResponse<Transaction>) => res.data!));
   }
 
-  getAnalytics(portfolioName: string, duration: string = 'ALL', frequency: string = 'Daily') {
-    const params = new HttpParams().set('duration', duration).set('frequency', frequency);
+  getAnalytics(
+    portfolioName: string,
+    duration: string = 'ALL',
+    frequency: string = 'Daily',
+    view: 'cumulative' | 'period' = 'cumulative'
+  ) {
+    const params = new HttpParams()
+      .set('duration', duration)
+      .set('frequency', frequency)
+      .set('view', view);
 
     return this.#http
       .get<ApiResponse<PortfolioAnalytics>>(`${this.#base}/${portfolioName}/analytics`, {

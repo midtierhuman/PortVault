@@ -383,33 +383,6 @@ table {
       }
     }
 
-    .analytics-controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 12px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-
-      .duration-field {
-        width: 180px;
-        margin: 0;
-      }
-
-      .frequency-selector {
-        display: flex;
-        gap: 8px;
-
-        .frequency-btn {
-          min-width: 80px;
-          height: 36px;
-        }
-      }
-    }
-
     .charts-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
@@ -427,11 +400,38 @@ table {
 
         mat-card-header {
           padding: 20px 20px 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
 
           mat-card-title {
             font-size: 1.125rem;
             font-weight: 600;
             color: #333;
+          }
+
+          .chart-card-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+
+            .control-field {
+              width: 150px;
+              margin: 0;
+              font-size: 0.875rem;
+
+              ::ng-deep .mat-mdc-form-field-infix {
+                padding: 8px 0;
+                min-height: auto;
+              }
+
+              ::ng-deep .mat-mdc-text-field-wrapper {
+                padding: 0;
+              }
+            }
           }
         }
 

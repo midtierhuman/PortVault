@@ -198,56 +198,42 @@
             </div>
             }
 
-            <!-- Chart Controls -->
-            <div class="analytics-controls">
-              <mat-form-field appearance="outline" class="duration-field">
-                <mat-label>Duration</mat-label>
-                <mat-select [value]="duration()" (selectionChange)="changeDuration($event.value)">
-                  <mat-option value="1M">Last 1 Month</mat-option>
-                  <mat-option value="3M">Last 3 Months</mat-option>
-                  <mat-option value="6M">Last 6 Months</mat-option>
-                  <mat-option value="YTD">Year to Date</mat-option>
-                  <mat-option value="1Y">Last 1 Year</mat-option>
-                  <mat-option value="3Y">Last 3 Years</mat-option>
-                  <mat-option value="5Y">Last 5 Years</mat-option>
-                  <mat-option value="ALL">All Time</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <div class="frequency-selector">
-                <button
-                  mat-stroked-button
-                  [color]="frequency() === 'Daily' ? 'primary' : undefined"
-                  (click)="changeFrequency('Daily')"
-                  class="frequency-btn"
-                >
-                  Daily
-                </button>
-                <button
-                  mat-stroked-button
-                  [color]="frequency() === 'Weekly' ? 'primary' : undefined"
-                  (click)="changeFrequency('Weekly')"
-                  class="frequency-btn"
-                >
-                  Weekly
-                </button>
-                <button
-                  mat-stroked-button
-                  [color]="frequency() === 'Monthly' ? 'primary' : undefined"
-                  (click)="changeFrequency('Monthly')"
-                  class="frequency-btn"
-                >
-                  Monthly
-                </button>
-              </div>
-            </div>
-
             <!-- Charts Grid -->
             <div class="charts-grid">
               <!-- Investment Trend Chart -->
               <mat-card class="chart-card">
                 <mat-card-header>
                   <mat-card-title>Investment Trend</mat-card-title>
+                  <div class="chart-card-controls">
+                    <mat-form-field appearance="outline" class="control-field">
+                      <mat-label>Duration</mat-label>
+                      <mat-select
+                        [value]="duration()"
+                        (selectionChange)="changeDuration($event.value)"
+                      >
+                        <mat-option value="1M">Last 1 Month</mat-option>
+                        <mat-option value="3M">Last 3 Months</mat-option>
+                        <mat-option value="6M">Last 6 Months</mat-option>
+                        <mat-option value="YTD">Year to Date</mat-option>
+                        <mat-option value="1Y">Last 1 Year</mat-option>
+                        <mat-option value="3Y">Last 3 Years</mat-option>
+                        <mat-option value="5Y">Last 5 Years</mat-option>
+                        <mat-option value="ALL">All Time</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="control-field">
+                      <mat-label>Frequency</mat-label>
+                      <mat-select
+                        [value]="frequency()"
+                        (selectionChange)="changeFrequency($event.value)"
+                      >
+                        <mat-option value="daily">Daily</mat-option>
+                        <mat-option value="weekly">Weekly</mat-option>
+                        <mat-option value="monthly">Monthly</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
                 </mat-card-header>
                 <mat-card-content>
                   @if (investmentTrendChartOptions().series[0].data.length > 0) {
@@ -273,7 +259,39 @@
               <!-- Annual Investment Chart -->
               <mat-card class="chart-card">
                 <mat-card-header>
-                  <mat-card-title>Annual Investment</mat-card-title>
+                  <mat-card-title>Period-wise Investment</mat-card-title>
+                  <div class="chart-card-controls">
+                    <mat-form-field appearance="outline" class="control-field">
+                      <mat-label>Duration</mat-label>
+                      <mat-select
+                        [value]="barChartDuration()"
+                        (selectionChange)="changeBarChartDuration($event.value)"
+                      >
+                        <mat-option value="1M">Last 1 Month</mat-option>
+                        <mat-option value="3M">Last 3 Months</mat-option>
+                        <mat-option value="6M">Last 6 Months</mat-option>
+                        <mat-option value="YTD">Year to Date</mat-option>
+                        <mat-option value="1Y">Last 1 Year</mat-option>
+                        <mat-option value="3Y">Last 3 Years</mat-option>
+                        <mat-option value="5Y">Last 5 Years</mat-option>
+                        <mat-option value="ALL">All Time</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="control-field">
+                      <mat-label>Frequency</mat-label>
+                      <mat-select
+                        [value]="barChartFrequency()"
+                        (selectionChange)="changeBarChartFrequency($event.value)"
+                      >
+                        <mat-option value="daily">Daily</mat-option>
+                        <mat-option value="weekly">Weekly</mat-option>
+                        <mat-option value="monthly">Monthly</mat-option>
+                        <mat-option value="halfyearly">6 Months</mat-option>
+                        <mat-option value="yearly">1 Year</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
                 </mat-card-header>
                 <mat-card-content>
                   @if (annualInvestmentChartOptions().series[0].data.length > 0) {

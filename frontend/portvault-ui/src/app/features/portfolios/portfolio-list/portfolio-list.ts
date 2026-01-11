@@ -89,7 +89,11 @@ export class PortfolioListComponent {
 
   // Chart State
   duration = signal<'1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL'>('ALL');
-  frequency = signal<'Daily' | 'Weekly' | 'Monthly'>('Daily');
+  frequency = signal<'daily' | 'weekly' | 'monthly'>('daily');
+
+  // Bar Chart State
+  barChartDuration = signal<'1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL'>('ALL');
+  barChartFrequency = signal<'monthly' | 'halfyearly' | 'yearly'>('yearly');
 
   // -- Resources (Data Fetching) --
 
@@ -133,7 +137,7 @@ export class PortfolioListComponent {
     },
   });
 
-  // 4. Analytics (Chart Data)
+  // 4. Analytics - Cumulative View (for Investment Trend chart)
   analyticsResource = rxResource({
     params: () => {
       const p = this.selectedPortfolio();
@@ -141,8 +145,35 @@ export class PortfolioListComponent {
       return { name: p.name, duration: this.duration(), frequency: this.frequency() };
     },
     stream: ({ params }) => {
-      if (!params) return of({ history: [], segmentAllocation: [] });
-      return this.portfolioService.getAnalytics(params.name, params.duration, params.frequency);
+      if (!params) return of({ history: [], segmentAllocation: [], viewType: 'cumulative' });
+      return this.portfolioService.getAnalytics(
+        params.name,
+        params.duration,
+        params.frequency,
+        'cumulative'
+      );
+    },
+  });
+
+  // 5. Analytics - Period View (for Bar chart)
+  periodAnalyticsResource = rxResource({
+    params: () => {
+      const p = this.selectedPortfolio();
+      if (!p) return null;
+      return {
+        name: p.name,
+        duration: this.barChartDuration(),
+        frequency: this.barChartFrequency(),
+      };
+    },
+    stream: ({ params }) => {
+      if (!params) return of({ history: [], segmentAllocation: [], viewType: 'period' });
+      return this.portfolioService.getAnalytics(
+        params.name,
+        params.duration,
+        params.frequency,
+        'period'
+      );
     },
   });
 
@@ -164,7 +195,7 @@ export class PortfolioListComponent {
   investmentTrendChartOptions = computed(() => {
     const history = this.analyticsResource.value()?.history || [];
     const categories = history.map((h) => h.date);
-    const investedValues = history.map((h) => h.invested);
+    const investedValues = history.map((h) => h.amount);
 
     return {
       chart: { type: 'area', height: 350, toolbar: { show: false } } as ApexChart,
@@ -199,12 +230,13 @@ export class PortfolioListComponent {
   });
 
   annualInvestmentChartOptions = computed(() => {
-    const history = this.analyticsResource.value()?.history || [];
-    const annualData = this.aggregateByYear(history);
+    const history = this.periodAnalyticsResource.value()?.history || [];
+    const categories = history.map((h) => h.date);
+    const amounts = history.map((h) => h.amount);
 
     return {
       chart: { type: 'bar', height: 350, toolbar: { show: false } } as ApexChart,
-      xaxis: { categories: annualData.map((d) => d.year) } as ApexXAxis,
+      xaxis: { categories, labels: { rotate: -45 } } as ApexXAxis,
       dataLabels: { enabled: false } as ApexDataLabels,
       plotOptions: {
         bar: {
@@ -224,9 +256,7 @@ export class PortfolioListComponent {
             `₹${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
         },
       } as ApexTooltip,
-      series: [
-        { name: 'Annual Investment', data: annualData.map((d) => d.invested) },
-      ] as ApexAxisChartSeries,
+      series: [{ name: 'Investment Amount', data: amounts }] as ApexAxisChartSeries,
     };
   });
 
@@ -301,20 +331,9 @@ export class PortfolioListComponent {
   isLoading = computed(() => this.portfoliosResource.isLoading());
   isLoadingDetails = computed(() => this.holdingsResource.isLoading());
   isLoadingTransactions = computed(() => this.transactionsResource.isLoading());
-  isLoadingChart = computed(() => this.analyticsResource.isLoading());
-
-  private aggregateByYear(history: any[]): { year: string; invested: number }[] {
-    const yearMap = new Map<string, number>();
-
-    history.forEach((h) => {
-      const year = new Date(h.date).getFullYear().toString();
-      yearMap.set(year, h.invested);
-    });
-
-    return Array.from(yearMap.entries())
-      .map(([year, invested]) => ({ year, invested }))
-      .sort((a, b) => parseInt(a.year) - parseInt(b.year));
-  }
+  isLoadingChart = computed(
+    () => this.analyticsResource.isLoading() || this.periodAnalyticsResource.isLoading()
+  );
 
   private getDefaultFromDate(): Date {
     const date = new Date();
@@ -355,15 +374,23 @@ export class PortfolioListComponent {
 
   resetChartFilters() {
     this.duration.set('ALL');
-    this.frequency.set('Daily');
+    this.frequency.set('daily');
   }
 
   changeDuration(value: '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL') {
     this.duration.set(value);
   }
 
-  changeFrequency(value: 'Daily' | 'Weekly' | 'Monthly') {
+  changeFrequency(value: 'daily' | 'weekly' | 'monthly') {
     this.frequency.set(value);
+  }
+
+  changeBarChartDuration(value: '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'ALL') {
+    this.barChartDuration.set(value);
+  }
+
+  changeBarChartFrequency(value: 'monthly' | 'halfyearly' | 'yearly') {
+    this.barChartFrequency.set(value);
   }
 
   changePage(delta: number) {

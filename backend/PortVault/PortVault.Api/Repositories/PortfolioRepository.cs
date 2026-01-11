@@ -97,9 +97,9 @@ namespace PortVault.Api.Repositories
             return (items, totalCount);
         }
 
-        public async Task<AnalyticsResponse> GetPortfolioAnalyticsAsync(Guid portfolioId, DateTime? from, string frequency)
+        public async Task<AnalyticsResponse> GetPortfolioAnalyticsAsync(Guid portfolioId, DateTime? from, string frequency, string viewType = "cumulative")
         {
-            // 1. Fetch all transactions to calculate running balance correctly
+            // 1. Fetch all transactions to calculate balance correctly
             var transactions = await _db.Transactions
                 .Include(t => t.Instrument)
                 .Where(t => t.PortfolioId == portfolioId)
@@ -107,9 +107,9 @@ namespace PortVault.Api.Repositories
                 .Select(t => new { t.TradeDate, t.TradeType, t.Quantity, t.Price, t.Segment, t.InstrumentId })
                 .ToListAsync();
 
-            // 2. Calculate daily running balance (sparse)
+            // 2. Calculate daily values based on view type
             var fullHistory = new SortedDictionary<DateTime, decimal>();
-            decimal currentInvested = 0;
+            decimal cumulativeInvested = 0;
             
             var dailyTxns = transactions
                 .GroupBy(t => t.TradeDate.Date)
@@ -117,15 +117,24 @@ namespace PortVault.Api.Repositories
 
             foreach (var day in dailyTxns)
             {
+                decimal dayAmount = 0;
                 foreach (var txn in day)
                 {
                     var amount = txn.Quantity * txn.Price;
                     if (txn.TradeType == TradeType.Buy)
-                        currentInvested += amount;
+                    {
+                        cumulativeInvested += amount;
+                        dayAmount += amount;
+                    }
                     else
-                        currentInvested -= amount;
+                    {
+                        cumulativeInvested -= amount;
+                        dayAmount -= amount;
+                    }
                 }
-                fullHistory[day.Key] = currentInvested;
+                
+                // Store either cumulative or period value
+                fullHistory[day.Key] = viewType == "period" ? dayAmount : cumulativeInvested;
             }
 
             // 3. Resample based on Frequency and Filter by Duration
@@ -145,33 +154,130 @@ namespace PortVault.Api.Repositories
                     
                     var nextIdx = ~idx;
                     if (nextIdx == 0) return 0;
-                    return fullHistory[historyKeys[nextIdx - 1]];
+                    
+                    if (viewType == "period")
+                    {
+                        // For period view, if no transaction on this date, return 0
+                        return 0;
+                    }
+                    else
+                    {
+                        // For cumulative view, return last known value
+                        return fullHistory[historyKeys[nextIdx - 1]];
+                    }
+                }
+                
+                decimal GetPeriodAmount(DateTime start, DateTime end)
+                {
+                    // Sum all amounts in the period for period view
+                    return fullHistory
+                        .Where(kvp => kvp.Key >= start && kvp.Key < end)
+                        .Sum(kvp => kvp.Value);
                 }
 
                 var freq = frequency?.ToLowerInvariant() ?? "daily";
                 
                 if (freq == "transaction")
                 {
-                    historyPoints.Add(new TimePoint { Date = startDate, Invested = GetBalanceAt(startDate) });
+                    historyPoints.Add(new TimePoint { Date = startDate, Amount = GetBalanceAt(startDate) });
                     foreach (var kvp in fullHistory.Where(x => x.Key > startDate && x.Key <= endDate))
                     {
-                        historyPoints.Add(new TimePoint { Date = kvp.Key, Invested = kvp.Value });
+                        historyPoints.Add(new TimePoint { Date = kvp.Key, Amount = kvp.Value });
                     }
-                    if (historyPoints.Last().Date < endDate)
-                        historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
+                    if (historyPoints.Any() && historyPoints.Last().Date < endDate)
+                        historyPoints.Add(new TimePoint { Date = endDate, Amount = GetBalanceAt(endDate) });
                 }
-                else
+                else if (freq == "daily")
                 {
-                     var iterator = startDate;
+                    // For daily frequency
+                    if (viewType == "period")
+                    {
+                        // Period view: Only return days with non-zero amounts
+                        foreach (var kvp in fullHistory.Where(x => x.Key >= startDate && x.Key <= endDate && x.Value != 0))
+                        {
+                            historyPoints.Add(new TimePoint { Date = kvp.Key, Amount = kvp.Value });
+                        }
+                    }
+                    else
+                    {
+                        // Cumulative view: Only return days where value actually changed (transaction days)
+                        // This avoids sending hundreds of unchanged days
+                        
+                        // Add start point
+                        historyPoints.Add(new TimePoint { Date = startDate, Amount = GetBalanceAt(startDate) });
+                        
+                        // Add only days with actual transactions (where cumulative value changed)
+                        foreach (var kvp in fullHistory.Where(x => x.Key > startDate && x.Key <= endDate))
+                        {
+                            historyPoints.Add(new TimePoint { Date = kvp.Key, Amount = kvp.Value });
+                        }
+                        
+                        // Add end point if not already included and it's different from last point
+                        if (historyPoints.Any() && historyPoints.Last().Date < endDate)
+                        {
+                            var endAmount = GetBalanceAt(endDate);
+                            if (historyPoints.Last().Amount != endAmount)
+                            {
+                                historyPoints.Add(new TimePoint { Date = endDate, Amount = endAmount });
+                            }
+                        }
+                    }
+                }
+                else if (freq == "weekly")
+                {
+                    var iterator = startDate;
                     while (iterator <= endDate)
                     {
-                        historyPoints.Add(new TimePoint { Date = iterator, Invested = GetBalanceAt(iterator) });
-                        if (freq == "monthly") iterator = iterator.AddMonths(1);
-                        else if (freq == "weekly") iterator = iterator.AddDays(7);
-                        else iterator = iterator.AddDays(1);
+                        DateTime periodEnd = iterator.AddDays(7);
+                        decimal amount = viewType == "period" 
+                            ? GetPeriodAmount(iterator, periodEnd)
+                            : GetBalanceAt(iterator);
+                        
+                        historyPoints.Add(new TimePoint { Date = iterator, Amount = amount });
+                        iterator = iterator.AddDays(7);
                     }
-                    if (historyPoints.Last().Date < endDate)
-                        historyPoints.Add(new TimePoint { Date = endDate, Invested = GetBalanceAt(endDate) });
+                }
+                else if (freq == "monthly")
+                {
+                    var iterator = startDate;
+                    while (iterator <= endDate)
+                    {
+                        DateTime periodEnd = iterator.AddMonths(1);
+                        decimal amount = viewType == "period" 
+                            ? GetPeriodAmount(iterator, periodEnd)
+                            : GetBalanceAt(iterator);
+                        
+                        historyPoints.Add(new TimePoint { Date = iterator, Amount = amount });
+                        iterator = iterator.AddMonths(1);
+                    }
+                }
+                else if (freq == "halfyearly")
+                {
+                    var iterator = startDate;
+                    while (iterator <= endDate)
+                    {
+                        DateTime periodEnd = iterator.AddMonths(6);
+                        decimal amount = viewType == "period" 
+                            ? GetPeriodAmount(iterator, periodEnd)
+                            : GetBalanceAt(iterator);
+                        
+                        historyPoints.Add(new TimePoint { Date = iterator, Amount = amount });
+                        iterator = iterator.AddMonths(6);
+                    }
+                }
+                else if (freq == "yearly")
+                {
+                    var iterator = startDate;
+                    while (iterator <= endDate)
+                    {
+                        DateTime periodEnd = iterator.AddYears(1);
+                        decimal amount = viewType == "period" 
+                            ? GetPeriodAmount(iterator, periodEnd)
+                            : GetBalanceAt(iterator);
+                        
+                        historyPoints.Add(new TimePoint { Date = iterator, Amount = amount });
+                        iterator = iterator.AddYears(1);
+                    }
                 }
             }
 
@@ -216,7 +322,8 @@ namespace PortVault.Api.Repositories
             return new AnalyticsResponse 
             { 
                 History = historyPoints, 
-                SegmentAllocation = allocation 
+                SegmentAllocation = allocation,
+                ViewType = viewType
             };
         }
 

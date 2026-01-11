@@ -1,6 +1,6 @@
 export interface AnalyticsHistory {
   date: string;
-  invested: number;
+  amount: number;
 }
 
 export interface SegmentAllocation {
@@ -12,4 +12,5 @@ export interface SegmentAllocation {
 export interface PortfolioAnalytics {
   history: AnalyticsHistory[];
   segmentAllocation: SegmentAllocation[];
+  viewType: string;
 }

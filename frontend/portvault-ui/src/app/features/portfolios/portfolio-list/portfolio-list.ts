@@ -332,6 +332,32 @@ export class PortfolioListComponent {
     }
   }
 
+  async recalculateHoldings() {
+    const portfolioName = this.selectedPortfolio()?.name;
+    if (!portfolioName) return;
+
+    try {
+      await firstValueFrom(this.portfolioService.recalculateHoldings(portfolioName));
+
+      this.snackBar.open('Holdings recalculated successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+
+      // Reload resources
+      this.holdingsResource.reload();
+      this.analyticsResource.reload();
+    } catch (error) {
+      console.error('Failed to recalculate holdings:', error);
+      this.snackBar.open('Failed to recalculate holdings. Please try again.', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+      });
+    }
+  }
+
   backToList() {
     this.selectedPortfolio.set(null);
   }

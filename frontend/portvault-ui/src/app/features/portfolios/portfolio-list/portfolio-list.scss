@@ -291,4 +291,17 @@ table {
       }
     }
   }
+
+  .tab-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px 0;
+    margin-bottom: 16px;
+
+    button {
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
 }

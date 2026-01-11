@@ -111,4 +111,10 @@ export class PortfolioService {
       })
       .pipe(map((res: ApiResponse<PortfolioAnalytics>) => res.data!));
   }
+
+  recalculateHoldings(portfolioName: string) {
+    return this.#http
+      .put<ApiResponse<null>>(`${this.#base}/${portfolioName}/holdings/recalculate`, {})
+      .pipe(map((res: ApiResponse<null>) => res));
+  }
 }

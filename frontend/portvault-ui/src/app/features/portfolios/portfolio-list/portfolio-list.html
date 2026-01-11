@@ -60,6 +60,18 @@
       <mat-tab-group>
         <!-- Holdings Tab -->
         <mat-tab label="Holdings">
+          <div class="tab-header">
+            <button
+              mat-raised-button
+              color="accent"
+              (click)="recalculateHoldings()"
+              [disabled]="holdingsResource.isLoading()"
+            >
+              <mat-icon>refresh</mat-icon>
+              Recalculate Holdings
+            </button>
+          </div>
+
           @if (holdings().length > 0) {
           <table mat-table [dataSource]="holdings()" class="details-table">
             <ng-container matColumnDef="symbol">

@@ -71,6 +71,66 @@ namespace PortVault.Api.Controllers.User
             return Ok(response);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> AddTransaction(string name, [FromBody] CreateTransactionRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid transaction data"));
+
+            var userIdClaim = base.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return Unauthorized(ApiResponse<object>.ErrorResponse("Unauthorized access"));
+
+            var portfolio = await _repo.GetByNameAsync(name, userId);
+            if (portfolio is null)
+                return NotFound(ApiResponse<object>.ErrorResponse($"Portfolio '{name}' not found"));
+
+            if (!Enum.TryParse<TradeType>(request.TradeType, true, out var tradeType))
+                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid trade type. Valid types are: Buy, Sell"));
+
+            try
+            {
+                var transactionDto = new TransactionImportDto
+                {
+                    Symbol = request.Symbol,
+                    ISIN = request.ISIN,
+                    TradeDate = request.TradeDate,
+                    OrderExecutionTime = request.OrderExecutionTime,
+                    Segment = request.Segment,
+                    Series = request.Series,
+                    TradeType = tradeType,
+                    Quantity = request.Quantity,
+                    Price = request.Price,
+                    TradeID = request.TradeID,
+                    OrderID = request.OrderID
+                };
+
+                var result = await _repo.AddTransactionsAsync(new[] { transactionDto }, portfolio.Id, userId);
+
+                if (result.Errors.Any())
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse(
+                        $"Failed to add transaction: {string.Join(", ", result.Errors)}"
+                    ));
+                }
+
+                if (result.AddedCount > 0)
+                {
+                    await _repo.RecalculateHolding(portfolio.Id);
+                }
+
+                var successResponse = ApiResponse<object>.SuccessResponse(
+                    new { AddedCount = result.AddedCount },
+                    "Transaction added successfully"
+                );
+                return Ok(successResponse);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Error adding transaction: {ex.Message}"));
+            }
+        }
+
         [HttpPost("upload")]
         public async Task<IActionResult> Upload(string name, IFormFile file)
         {
@@ -202,7 +262,7 @@ namespace PortVault.Api.Controllers.User
         [HttpGet("~/api/portfolio/transactions/template")]
         public IActionResult DownloadTemplate()
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialOrganization("PortVault");
             using var package = new ExcelPackage();
             var worksheet = package.Workbook.Worksheets.Add("Transactions");
 
